@@ -8,7 +8,7 @@ import (
 
 func main() {
 	cameras := []string{"NAVCAM_LEFT", "NAVCAM_RIGHT"}
-	params := lib.GetRequestParams(cameras, 100, 0, -1, -1)
+	params := lib.GetRequestParams(cameras, 5, 1, -1, -1)
 	responseText := lib.GetImageMetadata(params)
 	fmt.Println("Response:", responseText)
 }
