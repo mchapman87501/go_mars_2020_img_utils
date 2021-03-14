@@ -41,7 +41,7 @@ func GetRequestParams(cameras []string, numPerPage int, page int, minSol int, ma
 func GetImageMetadata(params url.Values) []byte {
 	apiUrl := "https://mars.nasa.gov/rss/api/"
 	fullUrl := apiUrl + "?" + params.Encode()
-	fmt.Println("Request URL is", fullUrl)
+
 	resp, err := http.Get(fullUrl)
 	if err != nil {
 		fmt.Println("Failed getting:", fullUrl, "reason", err)

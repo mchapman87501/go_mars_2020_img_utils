@@ -12,11 +12,18 @@ func main() {
 	params := lib.GetRequestParams(cameras, 5, 1, -1, -1)
 	responseBytes := lib.GetImageMetadata(params)
 
-	var m interface{}
-	err := json.Unmarshal(responseBytes, &m)
+	var fields interface{}
+	err := json.Unmarshal(responseBytes, &fields)
 	if err != nil {
 		fmt.Println("Error decoding JSON response:", err)
 	} else {
-		fmt.Println("Response:", m)
+		m := fields.(map[string]interface{})
+		images := m["images"].([]interface{})
+		if len(images) <= 0 {
+			fmt.Println("Reply had no images")
+		} else {
+			firstImage := images[0]
+			fmt.Println("First image:", firstImage)
+		}
 	}
 }
