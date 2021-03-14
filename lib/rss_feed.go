@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -38,7 +39,19 @@ func GetRequestParams(cameras []string, numPerPage int, page int, minSol int, ma
 	return result
 }
 
-func GetImageMetadata(params url.Values) []byte {
+func parseImages(body []byte) ([]ImageInfo, error) {
+	result := []ImageInfo{}
+	// https://mariadesouza.com/2017/09/07/custom-unmarshal-json-in-golang/
+	var raw map[string]*json.RawMessage
+	err := json.Unmarshal(body, &raw)
+	if err != nil {
+		return result, err
+	}
+	err = json.Unmarshal(*raw["images"], &result)
+	return result, err
+}
+
+func GetImageMetadata(params url.Values) ([]ImageInfo, error) {
 	apiUrl := "https://mars.nasa.gov/rss/api/"
 	fullUrl := apiUrl + "?" + params.Encode()
 
@@ -49,7 +62,7 @@ func GetImageMetadata(params url.Values) []byte {
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Failed reading response body:", err)
+		return []ImageInfo{}, err
 	}
-	return body
+	return parseImages(body)
 }
