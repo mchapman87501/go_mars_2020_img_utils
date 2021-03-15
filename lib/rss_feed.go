@@ -6,7 +6,31 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"runtime/debug"
 )
+
+func ValidCameras() []string {
+	return []string{
+		"FRONT_HAZCAM_LEFT_A",
+		"FRONT_HAZCAM_LEFT_B",
+		"FRONT_HAZCAM_RIGHT_A",
+		"FRONT_HAZCAM_RIGHT_B",
+
+		"REAR_HAZCAM_LEFT",
+		"REAR_HAZCAM_RIGHT",
+
+		"NAVCAM_LEFT",
+		"NAVCAM_RIGHT",
+
+		"MCZ_LEFT",
+		"MCZ_RIGHT",
+
+		"EDL_DDCAM",
+		"EDL_PUCAM1",
+		"EDL_PUCAM2",
+		"EDL_RUCAM",
+	}
+}
 
 func getCamerasParam(cameras []string) string {
 	result := ""
@@ -48,6 +72,9 @@ func parseImages(body []byte) ([]ImageInfo, error) {
 		return result, err
 	}
 	err = json.Unmarshal(*raw["images"], &result)
+	if err != nil {
+		debug.PrintStack()
+	}
 	return result, err
 }
 
@@ -62,6 +89,7 @@ func GetImageMetadata(params url.Values) ([]ImageInfo, error) {
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
+		debug.PrintStack()
 		return []ImageInfo{}, err
 	}
 	return parseImages(body)

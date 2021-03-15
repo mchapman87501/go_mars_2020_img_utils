@@ -2,14 +2,69 @@ package lib
 
 import (
 	"encoding/json"
+	"fmt"
+	"math"
 	"strings"
 )
+
+type optFloat float64
+
+func isUnknown(data []byte) bool {
+	return string(data) == `"UNK"`
+}
+
+func (v *optFloat) UnmarshalJSON(data []byte) error {
+	sVal := string(data)
+	if isUnknown(data) {
+		*v = optFloat(math.NaN())
+		return nil
+	}
+	fmtStr := "%g"
+	if sVal[0] == '"' {
+		fmtStr = `"%g"`
+	}
+	_, err := fmt.Sscanf(sVal, fmtStr, v)
+	return err
+}
+
+type optInt int
+
+func (v *optInt) UnmarshalJSON(data []byte) error {
+	sVal := string(data)
+	if isUnknown(data) {
+		*v = 0
+		return nil
+	}
+	fmtStr := "%d"
+	if sVal[0] == '"' {
+		fmtStr = `"%d"`
+	}
+	_, err := fmt.Sscanf(sVal, fmtStr, v)
+
+	return err
+}
+
+type FloatTuple []float64
+
+func (v *FloatTuple) UnmarshalJSON(data []byte) error {
+	if isUnknown(data) {
+		return nil // Empty
+	}
+	// avoid recursion.
+	var vBase []float64
+	err := json.Unmarshal(tupleAsArray(data), &vBase)
+	if err != nil {
+		return err
+	}
+	*v = vBase
+	return nil
+}
 
 type CameraInfo struct {
 	CameraModelComponentList interface{} `json:"camera_model_component_list"`
 	CameraModelType          string      `json:"camera_model_type"`
-	CameraPosition           []float64   `json:"camera_position"`
-	CameraVector             []float64   `json:"camera_vector"`
+	CameraPosition           FloatTuple  `json:"camera_position"`
+	CameraVector             FloatTuple  `json:"camera_vector"`
 	FilterName               string      `json:"filter_name"`
 	Instrument               string      `json:"instrument"`
 }
@@ -39,6 +94,9 @@ func tupleAsArray(data []byte) []byte {
 }
 
 func (size *Size) UnmarshalJSON(data []byte) error {
+	if isUnknown(data) {
+		return nil
+	}
 	var coords []int
 	err := json.Unmarshal(tupleAsArray(data), &coords)
 	if err != nil {
@@ -55,6 +113,9 @@ type Rect struct {
 }
 
 func (rect *Rect) UnmarshalJSON(data []byte) error {
+	if isUnknown(data) {
+		return nil
+	}
 	arrayBytes := tupleAsArray(data)
 
 	var coords []int
@@ -70,13 +131,14 @@ func (rect *Rect) UnmarshalJSON(data []byte) error {
 }
 
 type ExtendedInfo struct {
-	MastAzimuth   float64 `json:"mastAz"`
-	MastElevation float64 `json:"mastEl"`
+	// These are all either a float or "UNK"
+	MastAzimuth   optFloat `json:"mastAz"`
+	MastElevation optFloat `json:"mastEl"`
+	Sclk          optFloat `json:"sclk"`
+	// "UNK" or a positive integer, typically 1 or 4.
+	ScaleFactor optInt `json:"optInt"`
 
-	Sclk float64 `json:"sclk"`
-
-	ScaleFactor int       `json:"scaleFactor"`
-	XYZ         []float64 `json:"xyz"`
+	XYZ FloatTuple `json:"xyz"`
 	// How to convince JSON to parse an array of 4 floats as a struct?
 	SubframeRect Rect `json:"subframeRect"`
 	Dimension    Size `json:"dimension"`
@@ -88,16 +150,16 @@ type ImageInfo struct {
 	Caption string `json:"caption"`
 	Title   string `json:"title"`
 
-	Attitude []float64 `json:"attitude"`
-	Sol      int       `json:"sol"`
+	Attitude FloatTuple `json:"attitude"`
+	Sol      optInt     `json:"sol"`
 
 	// How to parse date strings in Go?
 	DateTakenMars string `json:"date_taken_mars"`
 	DateTakenUtc  string `json:"date_taken_utc"`
 	DateReceived  string `json:"date_received"`
 
-	Drive int `json:"drive"`
-	Site  int `json:"site"`
+	Drive optInt `json:"drive"`
+	Site  optInt `json:"site"`
 
 	SampleType string `json:"sample_type"`
 

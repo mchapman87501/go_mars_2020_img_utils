@@ -2,23 +2,31 @@ package main
 
 import (
 	"fmt"
+	"log"
 
 	"com.dmoonc/mchapman/go_mars_perseverance_images/lib"
 )
 
 func main() {
-	cameras := []string{"NAVCAM_LEFT", "NAVCAM_RIGHT"}
-	params := lib.GetRequestParams(cameras, 5, 1, -1, -1)
-	images, err := lib.GetImageMetadata(params)
+	cameras := []string{} //lib.ValidCameras()
+	page := 0
+	for {
+		fmt.Println("Page", page+1)
 
-	if err != nil {
-		fmt.Println("Error retrieving images:", err)
-	}
+		params := lib.GetRequestParams(cameras, 100, page, -1, -1)
+		images, err := lib.GetImageMetadata(params)
 
-	fmt.Println("Number of images:", len(images))
-	if len(images) > 0 {
-		for i, v := range images {
-			fmt.Printf("Image %d: %v\n\n", i, v)
+		if err != nil {
+			log.Fatal(err)
 		}
+
+		if len(images) <= 0 {
+			return
+		}
+
+		for _, record := range images {
+			fmt.Println(record.Camera.Instrument) // , record.ImageId, record.Extended.SubframeRect)
+		}
+		page += 1
 	}
 }
