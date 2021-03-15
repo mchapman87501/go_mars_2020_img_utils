@@ -25,7 +25,7 @@ func main() {
 		}
 
 		for _, record := range images {
-			fmt.Println(record.Camera.Instrument) // , record.ImageId, record.Extended.SubframeRect)
+			fmt.Println(record.ImageId, record.Extended.SubframeRect)
 		}
 		page += 1
 	}

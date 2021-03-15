@@ -28,7 +28,12 @@ func ValidCameras() []string {
 		"EDL_DDCAM",
 		"EDL_PUCAM1",
 		"EDL_PUCAM2",
+		"EDL_RDCAM",
 		"EDL_RUCAM",
+
+		"LCAM",
+		"SHERLOC_WATSON",
+		"SKYCAM",
 	}
 }
 
