@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"runtime/debug"
 )
 
 func ValidCameras() []string {
@@ -68,18 +67,15 @@ func GetRequestParams(cameras []string, numPerPage int, page int, minSol int, ma
 	return result
 }
 
-func parseImages(body []byte) ([]ImageInfo, error) {
+func ParseImageMetadata(rawJson []byte) ([]ImageInfo, error) {
 	result := []ImageInfo{}
 	// https://mariadesouza.com/2017/09/07/custom-unmarshal-json-in-golang/
 	var raw map[string]*json.RawMessage
-	err := json.Unmarshal(body, &raw)
+	err := json.Unmarshal(rawJson, &raw)
 	if err != nil {
 		return result, err
 	}
 	err = json.Unmarshal(*raw["images"], &result)
-	if err != nil {
-		debug.PrintStack()
-	}
 	return result, err
 }
 
@@ -94,8 +90,7 @@ func GetImageMetadata(params url.Values) ([]ImageInfo, error) {
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		debug.PrintStack()
 		return []ImageInfo{}, err
 	}
-	return parseImages(body)
+	return ParseImageMetadata(body)
 }
