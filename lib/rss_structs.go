@@ -150,6 +150,9 @@ type ImageInfo struct {
 	Caption string `json:"caption"`
 	Title   string `json:"title"`
 
+	JsonLink string `json:"json_link"`
+	WebLink  string `json:"link"`
+
 	Attitude FloatTuple `json:"attitude"`
 	Sol      optInt     `json:"sol"`
 
