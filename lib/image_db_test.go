@@ -22,11 +22,11 @@ func TestNewImageDB(t *testing.T) {
 	_, err := recreateDB()
 
 	if err != nil {
-		t.Errorf("Error creating Image DB: %v", err)
+		t.Fatal("Error creating Image DB:", err)
 	} else {
 		_, err := os.Stat(dbFilename)
 		if errors.Is(err, os.ErrNotExist) {
-			t.Errorf("Expected NewImageDB to create %v, but it did not.", dbFilename)
+			t.Fatal("Expected NewImageDB to create", dbFilename, "but it did not.")
 		} else {
 			defer os.Remove(dbFilename)
 		}
@@ -38,36 +38,34 @@ func TestNewImageDB(t *testing.T) {
 func TestAddRecords(t *testing.T) {
 	idb, err := recreateDB()
 	if err != nil {
-		t.Errorf("Error creating Image DB: %v", err)
+		t.Fatal("Error creating Image DB:", err)
 	} else {
 		defer os.Remove(dbFilename)
 
 		data, err := ioutil.ReadFile("test_data/sample_rss_response.json")
-		if len(data) <= 0 {
-			t.Errorf("Failed to read test JSON file: %v", err)
+		if err != nil || len(data) <= 0 {
+			t.Fatal("Failed to read test JSON file:", err)
 		}
 
 		records, err := ParseImageMetadata(data)
 		if err != nil {
-			t.Errorf("Error parsing image metadata: %v", err)
+			t.Fatal("Error parsing image metadata:", err)
 		}
 
-		err = idb.AddOrUpdate(records)
-		if err != nil {
-			t.Errorf("Error adding/updating DB records: %v", err)
+		if err = idb.AddOrUpdate(records); err != nil {
+			t.Fatal("Error adding/updating DB records:", err)
 		}
 
 		stmt, err := idb.DB().Prepare("SELECT COUNT(*) FROM Images")
 		if err != nil {
-			t.Errorf("Error preparing count query: %v", err)
+			t.Fatal("Error preparing count query:", err)
 		}
 		defer stmt.Close()
 
 		countRow := stmt.QueryRow()
 		got := -1
-		err = countRow.Scan(&got)
-		if err != nil {
-			t.Errorf("Error retrieving count: %v", err)
+		if err = countRow.Scan(&got); err != nil {
+			t.Fatal("Error retrieving count:", err)
 		}
 		want := len(records)
 		if want != got {
