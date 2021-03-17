@@ -8,8 +8,9 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func fillDB(idb ImageDB, t *testing.T) {
-	data, err := ioutil.ReadFile("test_data/with_fake_pano_set.json")
+// TODO extract these to a test helper file.
+func loadDB(idb ImageDB, jsonPath string, t *testing.T) {
+	data, err := ioutil.ReadFile(jsonPath)
 	if err != nil || len(data) <= 0 {
 		t.Fatal("Failed to read test JSON file:", err)
 	}
@@ -25,13 +26,21 @@ func fillDB(idb ImageDB, t *testing.T) {
 	}
 }
 
+func loadFakeData(idb ImageDB, t *testing.T) {
+	loadDB(idb, "test_data/with_fake_pano_set.json", t)
+}
+
+func loadSampleData(idb ImageDB, t *testing.T) {
+	loadDB(idb, "test_data/sample_rss_response.json", t)
+}
+
 func recreateInMemDB(t *testing.T) ImageDB {
 	idb, err := NewImageDBAtPath(":memory:")
 	if err != nil {
 		t.Fatal("Could not create in-memory database:", err)
 	}
 
-	fillDB(idb, t)
+	loadFakeData(idb, t)
 	return idb
 }
 

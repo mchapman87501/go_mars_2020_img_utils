@@ -9,7 +9,8 @@ import (
 )
 
 type ImageDB struct {
-	DB *sql.DB
+	DB     *sql.DB
+	DBName string
 	// TODO add placeholders for prepared statements, for common ops such as
 	// insertion.
 }
@@ -90,6 +91,7 @@ func NewImageDBAtPath(pathname string) (ImageDB, error) {
 		return result, err
 	}
 	result.DB = db
+	result.DBName = pathname
 
 	return result, result.initSchema()
 }
@@ -123,7 +125,7 @@ func (idb *ImageDB) prepareUpdateOne() (*sql.Stmt, error) {
 		cam_model_type,
 		cam_pos_x, cam_pos_y, cam_pos_z,
 		sample_type,
-		full_res_url, json_url,
+		small_url, full_res_url, json_url,
 		date_taken_utc,
 		attitude, drive, site,
 		ext_mast_azimuth, ext_mast_elevation,
@@ -138,7 +140,7 @@ func (idb *ImageDB) prepareUpdateOne() (*sql.Stmt, error) {
 		?,
 		?, ?, ?,
 		?,
-		?, ?,
+		?, ?, ?,
 		?,
 		?, ?, ?,
 		?, ?,
@@ -171,7 +173,8 @@ func addOrUpdateOne(statement *sql.Stmt, record ImageInfo) error {
 		record.Camera.CameraModelComponentList,
 		record.Camera.CameraModelType,
 		camPos[0], camPos[1], camPos[2],
-		record.SampleType, record.ImageFiles.FullRes, record.JsonLink,
+		record.SampleType,
+		record.ImageFiles.Small, record.ImageFiles.FullRes, record.JsonLink,
 		record.DateTakenUtc, attitudeStr, record.Drive, record.Site,
 		record.Extended.MastAzimuth, record.Extended.MastElevation,
 		record.Extended.Sclk, record.Extended.ScaleFactor,
@@ -201,4 +204,23 @@ func (idb *ImageDB) Cameras() []string {
 		result = append(result, cam)
 	}
 	return result
+}
+
+func (idb *ImageDB) imageURL(imageID string, urlCol string) (string, error) {
+	query := fmt.Sprintf("SELECT %v FROM Images WHERE image_id = ?", urlCol)
+	result := ""
+
+	row := idb.DB.QueryRow(query, imageID)
+	err := row.Scan(&result)
+	return result, err
+}
+
+// Get the thumbnail URL for an image.
+func (idb *ImageDB) ThumbnailURL(imageID string) (string, error) {
+	return idb.imageURL(imageID, "small_url")
+}
+
+// Get the full-resolution URL for an image.
+func (idb *ImageDB) FullSizeURL(imageID string) (string, error) {
+	return idb.imageURL(imageID, "full_res_url")
 }

@@ -9,13 +9,18 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// TODO extract to shared test utilities.
 func recreateDB() (ImageDB, error) {
-	_, err := os.Stat(DefaultDBPathname)
+	return recreateDBAtPath(DefaultDBPathname)
+}
+
+func recreateDBAtPath(pathname string) (ImageDB, error) {
+	_, err := os.Stat(pathname)
 	if err == nil {
-		os.Remove(DefaultDBPathname)
+		os.Remove(pathname)
 	}
 
-	return NewImageDB()
+	return NewImageDBAtPath(pathname)
 }
 
 func TestNewImageDB(t *testing.T) {
