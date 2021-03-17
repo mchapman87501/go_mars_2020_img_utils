@@ -6,7 +6,6 @@ import (
 )
 
 func TestParseImageMetadata(t *testing.T) {
-	// data, err := fs.ReadFile("test_data/sample_rss_response.json")
 	data, err := ioutil.ReadFile("test_data/sample_rss_response.json")
 	if len(data) <= 0 {
 		t.Errorf("Failed to read test JSON file: %v", err)

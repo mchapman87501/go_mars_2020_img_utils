@@ -13,7 +13,7 @@ func main() {
 		log.Fatal("Could not instantiate image DB:", err)
 	}
 
-	cameras := []string{} //lib.ValidCameras()
+	cameras := []string{}
 	page := 0
 	for {
 		fmt.Println("Page", page+1)

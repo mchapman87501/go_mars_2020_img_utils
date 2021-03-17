@@ -4,18 +4,18 @@ import (
 	"database/sql"
 	"fmt"
 	"math"
-	"os"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
 type ImageDB struct {
-	db *sql.DB
+	DB *sql.DB
 	// TODO add placeholders for prepared statements, for common ops such as
 	// insertion.
 }
 
-const dbFilename = "./mars_perseverance_image_info.db"
+// NewImageDB creates/accesses a database at this location.
+const DefaultDBPathname = "./mars_perseverance_image_info.db"
 
 const schema string = `CREATE TABLE IF NOT EXISTS Images (
 		image_id TEXT NOT NULL PRIMARY KEY,
@@ -72,23 +72,25 @@ const schema string = `CREATE TABLE IF NOT EXISTS Images (
 	);`
 
 func (idb *ImageDB) initSchema() error {
-	_, err := idb.db.Exec(schema)
+	_, err := idb.DB.Exec(schema)
 	return err
 }
 
-// Creates a new image database in the current working directory.
+// Create/access an image database at the DefaultDBPathname.
 func NewImageDB() (ImageDB, error) {
-	result := ImageDB{}
-	file, err := os.Create(dbFilename)
-	file.Close()
+	return NewImageDBAtPath(DefaultDBPathname)
+}
 
+// Create/access an image database.
+func NewImageDBAtPath(pathname string) (ImageDB, error) {
+	result := ImageDB{}
+
+	db, err := sql.Open("sqlite3", pathname)
 	if err != nil {
 		return result, err
 	}
-	result.db, err = sql.Open("sqlite3", "./mars_perseverance_image_info.db")
-	if err != nil {
-		return result, err
-	}
+	result.DB = db
+
 	return result, result.initSchema()
 }
 
@@ -146,7 +148,7 @@ func (idb *ImageDB) prepareUpdateOne() (*sql.Stmt, error) {
 		?, ?, ?, ?,
 		?, ?
 	)`
-	return idb.db.Prepare(query)
+	return idb.DB.Prepare(query)
 }
 
 func addOrUpdateOne(statement *sql.Stmt, record ImageInfo) error {
@@ -160,7 +162,7 @@ func addOrUpdateOne(statement *sql.Stmt, record ImageInfo) error {
 	extXYZ := append(record.Extended.XYZ, nan, nan, nan)
 
 	_, err := statement.Exec(
-		record.ImageId,
+		record.ImageID,
 		record.Credit,
 		record.Caption,
 		record.Title,
@@ -181,6 +183,22 @@ func addOrUpdateOne(statement *sql.Stmt, record ImageInfo) error {
 	return err
 }
 
-func (idb *ImageDB) DB() *sql.DB {
-	return idb.db
+// Get the names of all cameras in the database.
+func (idb *ImageDB) Cameras() []string {
+	result := []string{}
+
+	rows, err := idb.DB.Query("SELECT DISINCT cam_instrument FROM Images")
+	if err != nil {
+		return result
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var cam string
+		if err = rows.Scan(&cam); err != nil {
+			return result
+		}
+		result = append(result, cam)
+	}
+	return result
 }

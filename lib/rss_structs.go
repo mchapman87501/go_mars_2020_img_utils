@@ -135,8 +135,8 @@ type ExtendedInfo struct {
 	MastAzimuth   optFloat `json:"mastAz"`
 	MastElevation optFloat `json:"mastEl"`
 	Sclk          optFloat `json:"sclk"`
-	// "UNK" or a positive integer, typically 1 or 4.
-	ScaleFactor optInt `json:"optInt"`
+	// "UNK" or a positive real, typically 1.0 or 4.0.
+	ScaleFactor optFloat `json:"scaleFactor"`
 
 	XYZ FloatTuple `json:"xyz"`
 	// How to convince JSON to parse an array of 4 floats as a struct?
@@ -145,7 +145,7 @@ type ExtendedInfo struct {
 }
 
 type ImageInfo struct {
-	ImageId string `json:"imageid"`
+	ImageID string `json:"imageid"`
 	Credit  string `json:"credit"`
 	Caption string `json:"caption"`
 	Title   string `json:"title"`
