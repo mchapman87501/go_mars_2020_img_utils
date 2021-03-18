@@ -52,3 +52,29 @@ func TestGraydient(t *testing.T) {
 
 	savePNG(rgbImage, "test_data/out/result_test_graydient.png", t)
 }
+
+func TestDemosaicRGBGray(t *testing.T) {
+	// Use a sample full-sensor readout image from NASA Mars 2020 website.
+	inputPathname := "test_data/nre_sample_image.png"
+	inf, err := os.Open(inputPathname)
+	if err != nil {
+		t.Fatal("Can't find test image", inputPathname)
+	}
+
+	inputImage, err := png.Decode(inf)
+	if err != nil {
+		t.Fatal("Could not decode PNG test image", inputPathname)
+	}
+
+	rgbGrayImage, ok := inputImage.(*image.RGBA)
+	if !ok {
+		t.Fatal("Input image did not decode as RGBA", inputPathname)
+	}
+
+	rgbImage, err := DemosaicRGBGray(rgbGrayImage)
+	if err != nil {
+		t.Fatal("Error de-mosaicing RGB-gray:", err)
+	}
+
+	savePNG(rgbImage, "test_data/out/result_test_demosaic_rgb_gray.png", t)
+}
