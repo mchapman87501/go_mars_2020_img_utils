@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"errors"
 	"image"
 	"image/color"
 )
@@ -77,14 +78,20 @@ func Demosaic(bayerImage *image.Gray) (image.Image, error) {
 }
 
 // Demosaic a grayscale image that was stored as RGBA.
-func DemosaicRGBGray(bayerImage *image.RGBA) (image.Image, error) {
-	grayBayer := image.NewGray(bayerImage.Bounds())
+func DemosaicRGBGray(bayerImage image.Image) (image.Image, error) {
+
+	rgbaImage, ok := (bayerImage).(*image.RGBA)
+	if !ok {
+		return bayerImage, errors.New("bayerImage must be an RGBA image")
+	}
+
+	grayBayer := image.NewGray(rgbaImage.Bounds())
 
 	// It should suffice to copy out any channel - all channels should
 	// have the same values.
 	iDest := 0
-	for iSrc := 0; iSrc < len(bayerImage.Pix); iSrc += 4 {
-		grayBayer.Pix[iDest] = bayerImage.Pix[iSrc]
+	for iSrc := 0; iSrc < len(rgbaImage.Pix); iSrc += 4 {
+		grayBayer.Pix[iDest] = rgbaImage.Pix[iSrc]
 		iDest += 1
 	}
 	return Demosaic(grayBayer)

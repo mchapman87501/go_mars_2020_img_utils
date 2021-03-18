@@ -66,12 +66,7 @@ func TestDemosaicRGBGray(t *testing.T) {
 		t.Fatal("Could not decode PNG test image", inputPathname)
 	}
 
-	rgbGrayImage, ok := inputImage.(*image.RGBA)
-	if !ok {
-		t.Fatal("Input image did not decode as RGBA", inputPathname)
-	}
-
-	rgbImage, err := DemosaicRGBGray(rgbGrayImage)
+	rgbImage, err := DemosaicRGBGray(inputImage)
 	if err != nil {
 		t.Fatal("Error de-mosaicing RGB-gray:", err)
 	}
