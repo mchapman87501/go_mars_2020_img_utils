@@ -2,7 +2,6 @@ package lib
 
 import (
 	"bytes"
-	"fmt"
 	"image"
 	_ "image/jpeg"
 	"image/png"
@@ -22,8 +21,14 @@ const DefaultCachePathname = "./image_cache"
 const thumbDir = "thumbnail"
 const fullDir = "full_res"
 
-func NewImageCache(idb ImageDB) ImageCache {
-	return ImageCache{idb, DefaultCachePathname}
+func NewImageCache(idb ImageDB) (ImageCache, error) {
+	return NewImageCacheAtPath(idb, DefaultCachePathname)
+}
+
+func NewImageCacheAtPath(idb ImageDB, cacheDir string) (ImageCache, error) {
+	result := ImageCache{idb, cacheDir}
+	err := result.ensureDirsExist()
+	return result, err
 }
 
 func (cache *ImageCache) ThumbDir() string {
@@ -42,13 +47,29 @@ func (cache *ImageCache) FullSizePath(imageID string) string {
 	return filepath.Join(cache.rootdir, fullDir, imageID+".png")
 }
 
-func ensureDirExists(pathname string) error {
-	abspath, err := filepath.Abs(pathname)
+func (cache *ImageCache) ensureDirsExist() error {
+	err := ensureDirExists(cache.rootdir)
 	if err != nil {
 		return err
 	}
-	dirpath := filepath.Dir(abspath)
-	return os.MkdirAll(dirpath, 0775)
+	err = ensureDirExists(cache.ThumbDir())
+	if err != nil {
+		return err
+	}
+	err = ensureDirExists(cache.FullSizeDir())
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Ensure that the directories in dirname exist.
+func ensureDirExists(dirname string) error {
+	abspath, err := filepath.Abs(dirname)
+	if err != nil {
+		return err
+	}
+	return os.MkdirAll(abspath, 0775)
 }
 
 func imageData(pathname string) (image.Image, error) {
@@ -76,13 +97,12 @@ func downloadImage(url string, destpath string) (image.Image, error) {
 	}
 
 	byteReader := bytes.NewReader(imageData)
-	result, formatName, err := image.Decode(byteReader)
+
+	result, _, err = image.Decode(byteReader)
 	if err != nil {
 		return result, err
 	}
-	fmt.Println("Decoded image data with format", formatName)
 
-	ensureDirExists(destpath)
 	// Save all images as PNG.
 	fileWriter, err := os.Create(destpath)
 	if err != nil {

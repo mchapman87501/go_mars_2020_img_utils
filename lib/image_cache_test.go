@@ -15,7 +15,10 @@ func TestGetAThumbnail(t *testing.T) {
 
 	loadSampleData(idb, t)
 
-	cache := NewImageCache(idb)
+	cache, err := NewImageCache(idb)
+	if err != nil {
+		t.Fatal("Error creating image cache:", err)
+	}
 	defer os.RemoveAll(cache.rootdir)
 
 	imageID := "SI0_0024_0669080939_077ECM_N0030792SRLC07015_0000LUJ"
@@ -41,7 +44,10 @@ func TestGetAFullRes(t *testing.T) {
 
 	loadSampleData(idb, t)
 
-	cache := NewImageCache(idb)
+	cache, err := NewImageCache(idb)
+	if err != nil {
+		t.Fatal("Error creating image cache:", err)
+	}
 	defer os.RemoveAll(cache.rootdir)
 
 	imageID := "NLF_0024_0669080250_161ECM_N0030792NCAM00194_01_290J"

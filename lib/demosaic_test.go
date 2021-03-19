@@ -42,15 +42,19 @@ func TestGraydient(t *testing.T) {
 			grayImage.Set(x, y, color.Gray{uint8(intensity)})
 		}
 	}
-
-	savePNG(grayImage, "test_data/out/input_test_graydient.png", t)
+	outDir := "test_data/out/demosaic/"
+	err := ensureDirExists(outDir)
+	if err != nil {
+		t.Fatal("Could not create test output directory", outDir)
+	}
+	savePNG(grayImage, outDir+"input_gradient.png", t)
 
 	rgbImage, err := Demosaic(grayImage)
 	if err != nil {
 		t.Fatal("Error de-mosaicing:", err)
 	}
 
-	savePNG(rgbImage, "test_data/out/result_test_graydient.png", t)
+	savePNG(rgbImage, outDir+"result_graydient.png", t)
 }
 
 func TestDemosaicRGBGray(t *testing.T) {
@@ -71,5 +75,10 @@ func TestDemosaicRGBGray(t *testing.T) {
 		t.Fatal("Error de-mosaicing RGB-gray:", err)
 	}
 
-	savePNG(rgbImage, "test_data/out/result_test_demosaic_rgb_gray.png", t)
+	outDir := "test_data/out/demosaic/"
+	err = ensureDirExists(outDir)
+	if err != nil {
+		t.Fatal("Could not create test output directory", outDir)
+	}
+	savePNG(rgbImage, outDir+"demosaic_rgb_gray.png", t)
 }

@@ -190,8 +190,9 @@ func addOrUpdateOne(statement *sql.Stmt, record ImageInfo) error {
 func (idb *ImageDB) Cameras() []string {
 	result := []string{}
 
-	rows, err := idb.DB.Query("SELECT DISINCT cam_instrument FROM Images")
+	rows, err := idb.DB.Query("SELECT DISTINCT cam_instrument FROM Images ORDER BY cam_instrument")
 	if err != nil {
+		fmt.Println("Error retrieving cameras:", err)
 		return result
 	}
 	defer rows.Close()

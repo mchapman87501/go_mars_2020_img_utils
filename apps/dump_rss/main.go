@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"com.dmoonc/mchapman/go_mars_perseverance_images/lib"
+    "com.dmoonc/mchapman87501/mars_2020_img_utils/lib"
 )
 
 func main() {

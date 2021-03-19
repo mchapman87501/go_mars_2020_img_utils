@@ -88,11 +88,11 @@ func TestGetCompositeImageSets(t *testing.T) {
 		t.Errorf("Expected # image sets: %v, got %v.", want, got)
 	}
 
-	for _, record := range records {
-		if len(record.Images) <= 1 {
+	for _, imageRecords := range records {
+		if len(imageRecords) <= 1 {
 			t.Errorf("Image sets must contain multiple images.")
 		}
-		for _, imageRecord := range record.Images {
+		for _, imageRecord := range imageRecords {
 			if imageRecord.Camera != cam {
 				t.Fatalf("Image set record contains unexpected camera %v", imageRecord.Camera)
 			}
@@ -100,3 +100,5 @@ func TestGetCompositeImageSets(t *testing.T) {
 		}
 	}
 }
+
+// TODO add sorting test.
