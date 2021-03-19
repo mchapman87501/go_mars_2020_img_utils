@@ -66,13 +66,6 @@ func valOrNan(fval sql.NullFloat64) float64 {
 	return math.NaN()
 }
 
-func valOrNan(fval sql.NullFloat64) float64 {
-	if fval.Valid {
-		return fval.Float64
-	}
-	return math.NaN()
-}
-
 func GetCompositeImageInfoRecords(idb ImageDB, camera string) ([]CompositeImageInfo, error) {
 	result := []CompositeImageInfo{}
 	rows, err := retrieveImageSets(idb, camera)
