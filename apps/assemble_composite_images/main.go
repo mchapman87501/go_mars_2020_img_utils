@@ -24,7 +24,21 @@ func savePNG(image image.Image, filename string) {
 	}
 }
 
+func demosaiced(cache lib.ImageCache, record lib.CompositeImageInfo) (image.Image, error) {
+	image, err := cache.FullSize(record.ImageID)
+	if err != nil {
+		return image, err
+	}
+	if record.ColorType == lib.ICT_E {
+		return lib.DemosaicRGBGray(image)
+	}
+	return image, nil
+}
+
 func assembleImageSet(cache lib.ImageCache, imageSet lib.CompositeImageSet) {
+	filename := imageSet.Name() + ".png"
+	fmt.Println("Processing", filename)
+
 	if len(imageSet) < 2 {
 		fmt.Println("Image set does not contain multiple images.")
 		return
@@ -45,7 +59,7 @@ func assembleImageSet(cache lib.ImageCache, imageSet lib.CompositeImageSet) {
 	}
 
 	for _, record := range sorted {
-		image, err := cache.FullSize(record.ImageID)
+		image, err := demosaiced(cache, record)
 		if err != nil {
 			fmt.Println("Error retrieving full size image", record.ImageID, "- skipping")
 		} else {
@@ -53,7 +67,7 @@ func assembleImageSet(cache lib.ImageCache, imageSet lib.CompositeImageSet) {
 		}
 	}
 
-	savePNG(compositor.Result, imageSet.Name()+".png")
+	savePNG(compositor.Result, filename)
 }
 
 func assembleImageSets(imageDB lib.ImageDB, imageSets []lib.CompositeImageSet) {
@@ -72,8 +86,7 @@ func main() {
 		log.Fatal("Could not instantiate image DB:", err)
 	}
 
-	cameras := imageDB.Cameras()
-	fmt.Println("Cameras:", cameras)
+	cameras := []string{"NAVCAM_RIGHT"} //imageDB.Cameras()
 	for _, camera := range cameras {
 		fmt.Println("Finding composite image sets from", camera)
 		imageSets, err := lib.GetCompositeImageSets(imageDB, camera)

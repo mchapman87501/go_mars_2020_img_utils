@@ -7,6 +7,46 @@ import (
 	"math"
 )
 
+// The 3rd letter of the image ID can tell what type of color data the image contains:
+// R -- image is (usually) PNG RGB, but it represents the red band of
+//      a full image
+// G -- as above, but green
+// B -- as above, but blue
+// E -- PNG RGB containing only grayscale data; this is the full
+//      readout of all of the pixels underneath the Bayer RGGB color filter
+//      array, and it needs to be de-mosaiced to create a full color image
+// F -- PNG RGB, all color channels, already de-mosaiced
+type ImageColorType int
+
+const (
+	ICT_R       = 1
+	ICT_G       = 2
+	ICT_B       = 3
+	ICT_E       = 4
+	ICT_F       = 5
+	ICT_Unknown = 6
+)
+
+func getColorType(imageID string) ImageColorType {
+	if len(imageID) < 3 {
+		return ICT_Unknown
+	}
+	switch imageID[2] {
+	case 'R':
+		return ICT_R
+	case 'G':
+		return ICT_G
+	case 'B':
+		return ICT_B
+	case 'E':
+		return ICT_E
+	case 'F':
+		return ICT_F
+	default:
+		return ICT_Unknown
+	}
+}
+
 type CompositeImageInfo struct {
 	ImageID string
 	Site    int
@@ -15,7 +55,15 @@ type CompositeImageInfo struct {
 
 	SubframeRect image.Rectangle
 
-	Camera string
+	Camera    string
+	ColorType ImageColorType
+}
+
+func valOrNan(fval sql.NullFloat64) float64 {
+	if fval.Valid {
+		return fval.Float64
+	}
+	return math.NaN()
 }
 
 func valOrNan(fval sql.NullFloat64) float64 {
@@ -54,6 +102,7 @@ func GetCompositeImageInfoRecords(idb ImageDB, camera string) ([]CompositeImageI
 		}
 		record.Sclk = valOrNan(sclkValue)
 		record.SubframeRect = image.Rect(x, y, x+width, y+height)
+		record.ColorType = getColorType(record.ImageID)
 		result = append(result, record)
 	}
 
@@ -122,7 +171,8 @@ func GetCompositeImageSets(idb ImageDB, camera string) ([]CompositeImageSet, err
 	currImages := []CompositeImageInfo{}
 	for _, record := range records {
 		if record.Sclk != prevSclk {
-			if len(currImages) > 0 {
+			// Composite image sets must have more than one constituent image.
+			if len(currImages) > 1 {
 				result = append(result, currImages)
 			}
 			currImages = []CompositeImageInfo{}
@@ -131,7 +181,7 @@ func GetCompositeImageSets(idb ImageDB, camera string) ([]CompositeImageSet, err
 		currImages = append(currImages, record)
 	}
 
-	if len(currImages) > 0 {
+	if len(currImages) > 1 {
 		result = append(result, currImages)
 	}
 	return result, nil

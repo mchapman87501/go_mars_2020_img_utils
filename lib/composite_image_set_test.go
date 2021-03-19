@@ -102,3 +102,5 @@ func TestGetCompositeImageSets(t *testing.T) {
 }
 
 // TODO add sorting test.
+
+// TODO verify that all sets returned by GetCompositeImageSets have multiple images.
