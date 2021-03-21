@@ -1,6 +1,9 @@
 package color
 
-import "math"
+import (
+	"image/color"
+	"math"
+)
 
 func max(v ...float64) float64 {
 	if len(v) <= 0 {
@@ -28,19 +31,19 @@ func min(v ...float64) float64 {
 	return result
 }
 
-// Convert a value in the range 0...255 to a value in 0.0...1.0:
-func norm(v uint8) float64 {
-	return float64(v) / 255.0
+// Convert a value in the range 0...0xffffffff to a value in 0.0...1.0:
+func norm(v uint32) float64 {
+	return float64(v) / float64(0xffffffff)
 }
 
-// Convert a value in 0.0 ... 1.0 to a value in 0.0 ... 255.0
-func denorm(v float64) uint8 {
-	return uint8(v * 255.0)
+// Convert a value in 0.0 ... 1.0 to a value in 0.0 ... 0xffffffff
+func denorm(v float64) uint32 {
+	return uint32(v * 0xffffffff)
 }
 
 // Convert RGB color to HSV.
 // Returns values in the range 0.0 ... 1.0
-func RGBToHSV(r, g, b uint8) (float64, float64, float64) {
+func RGBToHSV(r, g, b uint32) (float64, float64, float64) {
 	rn := norm(r)
 	gn := norm(g)
 	bn := norm(b)
@@ -80,13 +83,24 @@ func RGBToHSV(r, g, b uint8) (float64, float64, float64) {
 	return hComp, sComp, vComp
 }
 
+func RGB8ToHSV(r, g, b uint8) (float64, float64, float64) {
+	r32 := uint32(r)
+	// This is blindly copied from image/color/color.go.
+	r32 |= r32 << 8
+	g32 := uint32(g)
+	g32 |= g32 << 8
+	b32 := uint32(b)
+	b32 |= b32 << 8
+	return RGBToHSV(r32, g32, b32)
+}
+
 // Convert HSV color to RGB.
 // h, s, v are each in 0.0 ... 1.0.
-// The returned values are each in 0 ... 255
-func HSVToRGB(h, s, v float64) (uint8, uint8, uint8) {
-	v8 := denorm(v)
+// The returned values are each in 0 ... 0xffffffff
+func HSVToRGB(h, s, v float64) (uint32, uint32, uint32) {
+	v32 := denorm(v)
 	if s == 0 {
-		return v8, v8, v8
+		return v32, v32, v32
 	}
 	i := math.Floor(h * 6.0)
 	f := (h * 6.0) - float64(i) // nearest hue sextant
@@ -94,20 +108,50 @@ func HSVToRGB(h, s, v float64) (uint8, uint8, uint8) {
 	q := denorm(v * (1.0 - s*f))
 	t := denorm(v * (1.0 - s*(1.0-f)))
 
-	switch uint8(math.Mod(i, 6.0)) {
+	switch uint32(math.Mod(i, 6.0)) {
 	case 0:
-		return v8, t, p
+		return v32, t, p
 	case 1:
-		return q, v8, p
+		return q, v32, p
 	case 2:
-		return p, v8, t
+		return p, v32, t
 	case 3:
-		return p, q, v8
+		return p, q, v32
 	case 4:
-		return t, p, v8
+		return t, p, v32
 	case 5:
-		return v8, p, q
+		return v32, p, q
 	}
 	// Should not be able to get here...
 	return 0, 0, 0
 }
+
+type HSV struct {
+	H, S, V float64 // TODO consider a fixed-point repr, e.g., int32
+}
+
+// Conform to color.Color interface:
+func (c HSV) RGBA() (r, g, b, a uint32) {
+	r8, g8, b8 := HSVToRGB(c.H, c.S, c.V)
+	r = uint32(r8)
+	// Blindly copying from image/color/color.go - '|=' instead of '='?
+	r |= r << 8
+	g = uint32(g8)
+	g |= g << 8
+	b = uint32(b8)
+	b |= b << 8
+	a = math.MaxUint32
+	return
+}
+
+// Conform to color.ColorModel:
+func hsvModel(c color.Color) color.Color {
+	if _, ok := c.(HSV); ok {
+		return c
+	}
+	r, g, b, _ := c.RGBA()
+	h, s, v := RGBToHSV(r, g, b)
+	return HSV{h, s, v}
+}
+
+var HSVModel color.Model = color.ModelFunc(hsvModel)
