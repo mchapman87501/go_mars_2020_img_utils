@@ -1,10 +1,10 @@
-package hsv_image
+package image
 
 import (
 	"image"
 	"image/color"
 
-	"com.dmoonc/mchapman87501/mars_2020_img_utils/lib/hsv_image/hsv_color"
+	hsv_color "com.dmoonc/mchapman87501/mars_2020_img_utils/lib/image/color"
 )
 
 type HSVImage struct {
