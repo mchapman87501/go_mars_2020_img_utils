@@ -7,22 +7,22 @@ import (
 	hsv_color "com.dmoonc/mchapman87501/mars_2020_img_utils/lib/image/color"
 )
 
-type HSVImage struct {
+type HSV struct {
 	// Pix, Stride, Rect
 	Pix    []float64
 	Stride int
 	Rect   image.Rectangle
 }
 
-func (p *HSVImage) ColorModel() color.Model { return hsv_color.HSVModel }
+func (p *HSV) ColorModel() color.Model { return hsv_color.HSVModel }
 
-func (p *HSVImage) Bounds() image.Rectangle { return p.Rect }
+func (p *HSV) Bounds() image.Rectangle { return p.Rect }
 
-func (p *HSVImage) At(x, y int) color.Color {
+func (p *HSV) At(x, y int) color.Color {
 	return p.HSVAt(x, y)
 }
 
-func (p *HSVImage) HSVAt(x, y int) hsv_color.HSV {
+func (p *HSV) HSVAt(x, y int) hsv_color.HSV {
 	if !(image.Point{x, y}.In(p.Rect)) {
 		return hsv_color.HSV{
 			H: 0,
@@ -31,14 +31,14 @@ func (p *HSVImage) HSVAt(x, y int) hsv_color.HSV {
 		}
 	}
 	i := p.PixOffset(x, y)
-	return hsv_color.HSV{p.Pix[i], p.Pix[i+1], p.Pix[i+2]}
+	return hsv_color.HSV{H: p.Pix[i], S: p.Pix[i+1], V: p.Pix[i+2]}
 }
 
-func (p *HSVImage) PixOffset(x, y int) int {
+func (p *HSV) PixOffset(x, y int) int {
 	return (y-p.Rect.Min.Y)*p.Stride + (x-p.Rect.Min.X)*3
 }
 
-func (p *HSVImage) Set(x, y int, c color.Color) {
+func (p *HSV) Set(x, y int, c color.Color) {
 	if !(image.Point{x, y}.In(p.Rect)) {
 		return
 	}
@@ -50,7 +50,7 @@ func (p *HSVImage) Set(x, y int, c color.Color) {
 	s[2] = c1.V
 }
 
-func (p *HSVImage) SetHSVAt(x, y int, c hsv_color.HSV) {
+func (p *HSV) SetHSVAt(x, y int, c hsv_color.HSV) {
 	if !(image.Point{x, y}.In(p.Rect)) {
 		return
 	}
@@ -61,33 +61,33 @@ func (p *HSVImage) SetHSVAt(x, y int, c hsv_color.HSV) {
 	s[2] = c.V
 }
 
-func (p *HSVImage) SubImage(rect image.Rectangle) *HSVImage {
+func (p *HSV) SubImage(rect image.Rectangle) *HSV {
 	// This is taken from the implementation of NRGBA's SubImage.
 	r := rect.Intersect(p.Rect)
 	if r.Empty() {
-		return &HSVImage{}
+		return &HSV{}
 	}
 	i := p.PixOffset(r.Min.X, r.Min.Y)
-	return &HSVImage{
+	return &HSV{
 		Pix:    p.Pix[i:], // <- Those who choose to access Pix directly can overrun the image.
 		Stride: p.Stride,
 		Rect:   r,
 	}
 }
 
-func (p *HSVImage) Opaque() bool {
+func (p *HSV) Opaque() bool {
 	return true
 }
 
-// Create an HSVImage from an image.RGBA.
+// Create an HSV from an image.RGBA.
 // The image origin will be at 0, 0.
-func HSVImageFromRGBA(rgba *image.RGBA) HSVImage {
+func HSVFromRGBA(rgba *image.RGBA) HSV {
 	width := rgba.Rect.Dx()
 	height := rgba.Rect.Dy()
 	pixelSize := 3 // H,S,V
 	numPixels := width * height
 	rect := rgba.Rect
-	result := HSVImage{make([]float64, numPixels*pixelSize), width * pixelSize, rect}
+	result := HSV{make([]float64, numPixels*pixelSize), width * pixelSize, rect}
 
 	srcOffset := 0
 	destOffset := 0
