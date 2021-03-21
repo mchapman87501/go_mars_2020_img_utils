@@ -1,4 +1,4 @@
-package color
+package hsv_color
 
 import (
 	"fmt"
