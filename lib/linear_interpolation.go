@@ -21,8 +21,12 @@ func NewFloat64Interpolator(yVals map[float64]float64) *Float64Interpolator {
 }
 
 func (interp *Float64Interpolator) Interp(x float64) float64 {
-	//xPrev, xNext := interp.bisectRight(x)
-	return x
+	xPrev, xNext := interp.bisectLeft(x)
+	xOffset := x - xPrev
+	fract := xOffset / (xNext - xPrev)
+	yPrev := interp.yVals[xPrev]
+	yNext := interp.yVals[xNext]
+	return yPrev + fract*(yNext-yPrev)
 }
 
 func (interp *Float64Interpolator) bisectLeft(x float64) (xPrev, xNext float64) {
