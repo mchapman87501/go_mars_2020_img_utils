@@ -1,7 +1,6 @@
 package hsv_color
 
 import (
-	"fmt"
 	"image/color"
 	"math"
 )
@@ -42,46 +41,50 @@ func denorm(v float64) uint32 {
 	return uint32(v * 0xffff)
 }
 
-// Convert RGB color to HSV.
+// Convert "normalized" RGB, with all components in 0.0 ... 1.0, to HSV.
 // Returns values in the range 0.0 ... 1.0
-func RGBToHSV(r, g, b uint32) (float64, float64, float64) {
-	rn := norm(r)
-	gn := norm(g)
-	bn := norm(b)
-
+func NormRGBToHSV(rn, gn, bn float64) (float64, float64, float64) {
 	// This derives from colorsys in the Python standard library.
+	// "Comp" means "color Component"
 	maxComp := max(rn, gn, bn)
 	minComp := min(rn, gn, bn)
 
 	// Normalized value, 0...1
-	vComp := maxComp
+	v := maxComp
 	if minComp == maxComp {
-		return 0, 0, vComp
+		return 0, 0, v
 	}
 
 	// Normalized saturation, 0...1
-	sComp := (maxComp - minComp) / maxComp
+	s := (maxComp - minComp) / maxComp
 
 	compRange := maxComp - minComp
-	rMargin := (maxComp - rn) / compRange
-	gMargin := (maxComp - gn) / compRange
-	bMargin := (maxComp - bn) / compRange
+	// How far from maximum value toward minimum value are r, g, b?
+	rComplement := (maxComp - rn) / compRange
+	gComplement := (maxComp - gn) / compRange
+	bComplement := (maxComp - bn) / compRange
 
 	// Normalized hue, 0...1
-	var hComp float64
+	var h float64
 	if rn == maxComp {
-		hComp = bMargin - gMargin
+		h = bComplement - gComplement
 	} else if gn == maxComp {
-		hComp = 2 + rMargin - bMargin
+		h = 2 + rComplement - bComplement
 	} else {
-		hComp = 4 + gMargin - rMargin
+		h = 4 + gComplement - rComplement
 	}
-	if hComp < 0.0 {
-		hComp += 6.0
+	if h < 0.0 {
+		h += 6.0
 	}
-	hComp = math.Mod((hComp / 6.0), 1.0)
+	h = math.Mod((h / 6.0), 1.0)
 
-	return hComp, sComp, vComp
+	return h, s, v
+}
+
+// Convert RGB color to HSV.
+// Returns values in the range 0.0 ... 1.0
+func RGBToHSV(r, g, b uint32) (float64, float64, float64) {
+	return NormRGBToHSV(norm(r), norm(g), norm(b))
 }
 
 func RGB8ToHSV(r, g, b uint8) (float64, float64, float64) {
@@ -92,41 +95,49 @@ func RGB8ToHSV(r, g, b uint8) (float64, float64, float64) {
 	g32 |= g32 << 8
 	b32 := uint32(b)
 	b32 |= b32 << 8
-	fmt.Printf("RGB8ToHSV: (%v, %v, %v) -> (%v, %v, %v)\n", r, g, b, r32, g32, b32)
 	return RGBToHSV(r32, g32, b32)
+}
+
+// Convert HSV color to "normalized" RGB,
+// with each result color component in 0.0 ... 1.0
+// Round-trip RGB->HSV->RGB does not always succeed.
+func HSVToNormRGB(h, s, v float64) (float64, float64, float64) {
+	if s == 0 {
+		return v, v, v
+	}
+	h6 := h * 6.0
+	i := int(math.Floor(h6))
+	f := h6 - float64(i) // nearest hue sextant
+	p := v * (1.0 - s)
+	q := v * (1.0 - s*f)
+	t := v * (1.0 - s*(1.0-f))
+
+	switch i % 6 {
+	case 0:
+		return v, t, p
+	case 1:
+		return q, v, p
+	case 2:
+		return p, v, t
+	case 3:
+		return p, q, v
+	case 4:
+		return t, p, v
+	case 5:
+		return v, p, q
+	}
+	// Should not be able to get here...
+	return 0, 0, 0
 }
 
 // Convert HSV color to RGB.
 // h, s, v are each in 0.0 ... 1.0.
 // Despite being uint32, the returned values are each in 0 ... 0xffff
 // I think this matches the expected behavior for Go's image/color code.
+// The algorithm is from Python's colorsys.
 func HSVToRGB(h, s, v float64) (uint32, uint32, uint32) {
-	v32 := denorm(v)
-	if s == 0 {
-		return v32, v32, v32
-	}
-	i := math.Floor(h * 6.0)
-	f := (h * 6.0) - float64(i) // nearest hue sextant
-	p := denorm(v * (1.0 - s))
-	q := denorm(v * (1.0 - s*f))
-	t := denorm(v * (1.0 - s*(1.0-f)))
-
-	switch uint32(math.Mod(i, 6.0)) {
-	case 0:
-		return v32, t, p
-	case 1:
-		return q, v32, p
-	case 2:
-		return p, v32, t
-	case 3:
-		return p, q, v32
-	case 4:
-		return t, p, v32
-	case 5:
-		return v32, p, q
-	}
-	// Should not be able to get here...
-	return 0, 0, 0
+	rn, gn, bn := HSVToNormRGB(h, s, v)
+	return denorm(rn), denorm(gn), denorm(bn)
 }
 
 type HSV struct {
@@ -154,7 +165,6 @@ func hsvModel(c color.Color) color.Color {
 	}
 	r, g, b, _ := c.RGBA()
 	h, s, v := RGBToHSV(r, g, b)
-	fmt.Printf("hsvModel(%T %v): (%v, %v, %v) -> (%v, %v, %v)\n", c, c, r, g, b, h, s, v)
 	return HSV{h, s, v}
 }
 

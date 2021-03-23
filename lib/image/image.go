@@ -1,7 +1,6 @@
 package image
 
 import (
-	"fmt"
 	"image"
 	"image/color"
 
@@ -45,7 +44,6 @@ func (p *HSV) Set(x, y int, c color.Color) {
 		return
 	}
 	c1 := hsv_color.HSVModel.Convert(c).(hsv_color.HSV)
-	fmt.Printf("Color %v == %v\n", c, c1)
 
 	i := p.PixOffset(x, y)
 	s := p.Pix[i : i+3 : i+3]

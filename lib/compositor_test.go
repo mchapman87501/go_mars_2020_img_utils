@@ -6,6 +6,8 @@ import (
 	"image/color"
 	"image/draw"
 	"testing"
+
+	hsv_image "com.dmoonc/mchapman87501/mars_2020_img_utils/lib/image"
 )
 
 func makeTile(row int, col int, width int, height int) draw.Image {
@@ -19,7 +21,7 @@ func makeTile(row int, col int, width int, height int) draw.Image {
 		}
 		intens8 := uint8(intensity)
 		red8 := uint8(red)
-		color := color.RGBA{red8, intens8, intens8, 0xff}
+		color := color.RGBA{red8, intens8 / 2, intens8, 0xff}
 		for y := 0; y < height; y++ {
 			result.Set(x, y, color)
 		}
@@ -50,6 +52,9 @@ func TestCompositorSingleOverlap(t *testing.T) {
 			y := (tileHeight - tileOverlap) * row
 			tileImage := makeTile(row, col, tileWidth, tileHeight)
 			savePNG(tileImage, fmt.Sprintf("%stile_%d_%d.png", outDir, col, row), t)
+			// Save its HSV equivalent:
+			hsvTileImage := hsv_image.HSVFromImage(tileImage)
+			savePNG(hsvTileImage, fmt.Sprintf("%stile_%d_%d_hsv.png", outDir, col, row), t)
 			subframeRect := image.Rect(x, y, x+tileWidth, y+tileHeight)
 			fmt.Printf("AddImage (%d, %d) at %v\n", row, col, subframeRect)
 			compositor.AddImage(tileImage, subframeRect)

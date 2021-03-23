@@ -414,5 +414,43 @@ func TestRGB8ToHSV(t *testing.T) {
 			t.Errorf("RGB8ToHSV failed for (%v, %v, %v): want (%v, %v, %v), got (%v, %v, %v)", tc.r, tc.g, tc.b, tc.hWant, tc.sWant, tc.vWant, hGot, sGot, vGot)
 		}
 	}
+}
 
+func TestRGBToHSVRoundTrip(t *testing.T) {
+	var intensity uint32
+	for intensity = 0; intensity <= 0xff; intensity++ {
+		red := intensity + 50
+		if red > 0xff {
+			red = 0xff
+		}
+		green := intensity / 4
+		blue := intensity
+
+		h, s, v := RGBToHSV(red, green, blue)
+		r, g, b := HSVToRGB(h, s, v)
+		if !((r == red) && (g == green) && (b == blue)) {
+			t.Errorf(
+				"Round-trip failed: (%v, %v, %v) -> (%v, %v, %v)",
+				red, green, blue, r, g, b)
+		}
+	}
+}
+
+func TestNormRGBToHSVRoundTrip(t *testing.T) {
+	for intensity := 0.0; intensity <= 1.0; intensity += 0.10 {
+		red := intensity + (50.0 / 255.0)
+		if red > 1.0 {
+			red = 1.0
+		}
+		green := intensity / 4.0
+		blue := intensity
+
+		h, s, v := NormRGBToHSV(red, green, blue)
+		r, g, b := HSVToNormRGB(h, s, v)
+		if !((r == red) && (g == green) && (b == blue)) {
+			t.Errorf(
+				"Norm round-trip failed: (%v, %v, %v) -> (%v, %v, %v) -> (%v, %v, %v)",
+				red, green, blue, h, s, v, r, g, b)
+		}
+	}
 }
