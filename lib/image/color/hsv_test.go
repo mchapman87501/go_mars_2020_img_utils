@@ -447,7 +447,7 @@ func TestNormRGBToHSVRoundTrip(t *testing.T) {
 
 		h, s, v := NormRGBToHSV(red, green, blue)
 		r, g, b := HSVToNormRGB(h, s, v)
-		if !((r == red) && (g == green) && (b == blue)) {
+		if !(eq(r, red) && eq(g, green) && eq(b, blue)) {
 			t.Errorf(
 				"Norm round-trip failed: (%v, %v, %v) -> (%v, %v, %v) -> (%v, %v, %v)",
 				red, green, blue, h, s, v, r, g, b)

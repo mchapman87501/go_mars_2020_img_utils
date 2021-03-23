@@ -41,43 +41,41 @@ func denorm(v float64) uint32 {
 	return uint32(v * 0xffff)
 }
 
+func rgbToHue(rn, gn, bn, minComp, maxComp float64) float64 {
+	const hueSextant = 1.0 / 6.0
+	dComp := maxComp - minComp
+
+	// These exact comparisons should be ok given that minComp and maxComp
+	// are each set to one of rn, gn or bn.
+	if minComp == maxComp {
+		return 0.0
+	} else if rn == maxComp {
+		result := hueSextant * (gn - bn) / dComp
+		if result < 0.0 {
+			result += 1
+		}
+		return result
+	} else if gn == maxComp {
+		return hueSextant * ((bn-rn)/dComp + 2.0)
+	} else {
+		// bn == maxComp
+		return hueSextant * ((rn-gn)/dComp + 3.0)
+	}
+}
+
 // Convert "normalized" RGB, with all components in 0.0 ... 1.0, to HSV.
 // Returns values in the range 0.0 ... 1.0
 func NormRGBToHSV(rn, gn, bn float64) (float64, float64, float64) {
-	// This derives from colorsys in the Python standard library.
-	// "Comp" means "color Component"
+	// This derives from https://github.com/gtaylor/python-colormath.
 	maxComp := max(rn, gn, bn)
 	minComp := min(rn, gn, bn)
 
-	// Normalized value, 0...1
+	h := rgbToHue(rn, gn, bn, minComp, maxComp)
+	s := 0.0
+	if maxComp > 0.0 {
+		s = 1.0 - (minComp / maxComp)
+	}
 	v := maxComp
-	if minComp == maxComp {
-		return 0, 0, v
-	}
-
-	// Normalized saturation, 0...1
-	s := (maxComp - minComp) / maxComp
-
-	compRange := maxComp - minComp
-	// How far from maximum value toward minimum value are r, g, b?
-	rComplement := (maxComp - rn) / compRange
-	gComplement := (maxComp - gn) / compRange
-	bComplement := (maxComp - bn) / compRange
-
-	// Normalized hue, 0...1
-	var h float64
-	if rn == maxComp {
-		h = bComplement - gComplement
-	} else if gn == maxComp {
-		h = 2 + rComplement - bComplement
-	} else {
-		h = 4 + gComplement - rComplement
-	}
-	if h < 0.0 {
-		h += 6.0
-	}
-	h = math.Mod((h / 6.0), 1.0)
-
 	return h, s, v
 }
 
@@ -105,29 +103,41 @@ func HSVToNormRGB(h, s, v float64) (float64, float64, float64) {
 	if s == 0 {
 		return v, v, v
 	}
-	h6 := h * 6.0
-	i := int(math.Floor(h6))
-	f := h6 - float64(i) // nearest hue sextant
-	p := v * (1.0 - s)
-	q := v * (1.0 - s*f)
-	t := v * (1.0 - s*(1.0-f))
 
-	switch i % 6 {
-	case 0:
-		return v, t, p
-	case 1:
-		return q, v, p
-	case 2:
-		return p, v, t
-	case 3:
-		return p, q, v
-	case 4:
-		return t, p, v
-	case 5:
-		return v, p, q
+	// This is from Wikipedia.
+	chroma := s * v
+	h6 := h * 6.0
+	x := chroma * (1.0 - math.Abs(math.Mod(h6, 2.0)-1.0))
+
+	var r1, g1, b1 float64
+	if (0.0 <= h6) && (h6 <= 1) {
+		r1 = chroma
+		g1 = x
+		b1 = 0
+	} else if (1 < h6) && (h6 <= 2) {
+		r1 = x
+		g1 = chroma
+		b1 = 0
+	} else if (2 < h6) && (h6 <= 3) {
+		r1 = 0
+		g1 = chroma
+		b1 = x
+	} else if (3 < h6) && (h6 <= 4) {
+		r1 = 0
+		g1 = x
+		b1 = chroma
+	} else if (4 < h6) && (h6 <= 5) {
+		r1 = x
+		g1 = 0
+		b1 = chroma
+	} else {
+		r1 = chroma
+		g1 = 0
+		b1 = x
 	}
-	// Should not be able to get here...
-	return 0, 0, 0
+
+	m := v - chroma
+	return r1 + m, g1 + m, b1 + m
 }
 
 // Convert HSV color to RGB.
