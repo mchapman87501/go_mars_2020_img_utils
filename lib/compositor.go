@@ -40,8 +40,8 @@ type valueAdjustmentMap map[float64]float64
 func (comp *Compositor) matchValue(image image.Image, destRect image.Rectangle) image.Image {
 	result := hsv_image.HSVFromImage(image)
 
-	vam := comp.makeValueAdjustmentMap(result, destRect)
-	adjustValues(result, vam)
+	// vam := comp.makeValueAdjustmentMap(result, destRect)
+	// adjustValues(result, vam)
 
 	return result
 }
@@ -78,12 +78,34 @@ func (comp *Compositor) makeValueAdjustmentMap(hsvImage *hsv_image.HSV, destRect
 		}
 	}
 
+	// Overlapping regions may not cover the full gamut of Values.
+	// Add a default 1:1 mapping for extreme values, to aid interpolation.
+	extrema := []float64{0.0, 1.0}
+	for _, v := range extrema {
+		_, ok := result[v]
+		if !ok {
+			result[v] = v
+			counts[v] = 1
+		}
+	}
+
 	for k := range result {
 		result[k] /= counts[k]
 	}
+
+	fmt.Println("Value adjustment counts:", counts)
+	fmt.Println("Value adjustment map:", result)
+	fmt.Println("")
 	return result
 }
 
 func adjustValues(hsvImage *hsv_image.HSV, mapping valueAdjustmentMap) {
-	// TODO linear interpolation across mapping keys.
+	interpolator := NewFloat64Interpolator(mapping)
+	for x := hsvImage.Bounds().Min.X; x < hsvImage.Bounds().Max.X; x++ {
+		for y := hsvImage.Bounds().Min.Y; y < hsvImage.Bounds().Max.Y; y++ {
+			pix := hsvImage.HSVAt(x, y)
+			pix.V = interpolator.Interp(pix.V)
+			hsvImage.SetHSV(x, y, pix)
+		}
+	}
 }

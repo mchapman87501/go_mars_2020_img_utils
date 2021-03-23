@@ -1,6 +1,7 @@
 package image
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 
@@ -31,7 +32,8 @@ func (p *HSV) HSVAt(x, y int) hsv_color.HSV {
 		}
 	}
 	i := p.PixOffset(x, y)
-	return hsv_color.HSV{H: p.Pix[i], S: p.Pix[i+1], V: p.Pix[i+2]}
+	result := hsv_color.HSV{H: p.Pix[i], S: p.Pix[i+1], V: p.Pix[i+2]}
+	return result
 }
 
 func (p *HSV) PixOffset(x, y int) int {
@@ -42,15 +44,17 @@ func (p *HSV) Set(x, y int, c color.Color) {
 	if !(image.Point{x, y}.In(p.Rect)) {
 		return
 	}
-	i := p.PixOffset(x, y)
 	c1 := hsv_color.HSVModel.Convert(c).(hsv_color.HSV)
+	fmt.Printf("Color %v == %v\n", c, c1)
+
+	i := p.PixOffset(x, y)
 	s := p.Pix[i : i+3 : i+3]
 	s[0] = c1.H
 	s[1] = c1.S
 	s[2] = c1.V
 }
 
-func (p *HSV) SetHSVAt(x, y int, c hsv_color.HSV) {
+func (p *HSV) SetHSV(x, y int, c hsv_color.HSV) {
 	if !(image.Point{x, y}.In(p.Rect)) {
 		return
 	}

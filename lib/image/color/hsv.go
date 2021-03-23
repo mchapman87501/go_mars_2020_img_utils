@@ -1,6 +1,7 @@
 package hsv_color
 
 import (
+	"fmt"
 	"image/color"
 	"math"
 )
@@ -31,14 +32,14 @@ func min(v ...float64) float64 {
 	return result
 }
 
-// Convert a value in the range 0...0xffffffff to a value in 0.0...1.0:
+// Convert a value in the range 0...0xffff to a value in 0.0...1.0:
 func norm(v uint32) float64 {
-	return float64(v) / float64(0xffffffff)
+	return float64(v) / float64(0xffff)
 }
 
-// Convert a value in 0.0 ... 1.0 to a value in 0.0 ... 0xffffffff
+// Convert a value in 0.0 ... 1.0 to a value in 0.0 ... 0xffff
 func denorm(v float64) uint32 {
-	return uint32(v * 0xffffffff)
+	return uint32(v * 0xffff)
 }
 
 // Convert RGB color to HSV.
@@ -84,19 +85,21 @@ func RGBToHSV(r, g, b uint32) (float64, float64, float64) {
 }
 
 func RGB8ToHSV(r, g, b uint8) (float64, float64, float64) {
-	r32 := uint32(r)
 	// This is blindly copied from image/color/color.go.
+	r32 := uint32(r)
 	r32 |= r32 << 8
 	g32 := uint32(g)
 	g32 |= g32 << 8
 	b32 := uint32(b)
 	b32 |= b32 << 8
+	fmt.Printf("RGB8ToHSV: (%v, %v, %v) -> (%v, %v, %v)\n", r, g, b, r32, g32, b32)
 	return RGBToHSV(r32, g32, b32)
 }
 
 // Convert HSV color to RGB.
 // h, s, v are each in 0.0 ... 1.0.
-// The returned values are each in 0 ... 0xffffffff
+// Despite being uint32, the returned values are each in 0 ... 0xffff
+// I think this matches the expected behavior for Go's image/color code.
 func HSVToRGB(h, s, v float64) (uint32, uint32, uint32) {
 	v32 := denorm(v)
 	if s == 0 {
@@ -151,6 +154,7 @@ func hsvModel(c color.Color) color.Color {
 	}
 	r, g, b, _ := c.RGBA()
 	h, s, v := RGBToHSV(r, g, b)
+	fmt.Printf("hsvModel(%T %v): (%v, %v, %v) -> (%v, %v, %v)\n", c, c, r, g, b, h, s, v)
 	return HSV{h, s, v}
 }
 
