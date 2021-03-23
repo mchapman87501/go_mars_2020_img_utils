@@ -79,26 +79,23 @@ func (p *HSV) Opaque() bool {
 	return true
 }
 
+func NewHSV(r image.Rectangle) *HSV {
+	area := r.Dx() * r.Dy()
+	channels := 3
+	bufferSize := area * channels
+	pix := make([]float64, bufferSize)
+	return &HSV{Pix: pix, Stride: channels * r.Dx(), Rect: r}
+}
+
 // Create an HSV from an image.RGBA.
 // The image origin will be at 0, 0.
-func HSVFromRGBA(rgba *image.RGBA) HSV {
-	width := rgba.Rect.Dx()
-	height := rgba.Rect.Dy()
-	pixelSize := 3 // H,S,V
-	numPixels := width * height
-	rect := rgba.Rect
-	result := HSV{make([]float64, numPixels*pixelSize), width * pixelSize, rect}
+func HSVFromImage(src image.Image) *HSV {
+	rect := src.Bounds()
+	result := NewHSV(rect)
 
-	srcOffset := 0
-	destOffset := 0
 	for y := rect.Min.Y; y < rect.Max.Y; y++ {
 		for x := rect.Min.X; x < rect.Max.X; x++ {
-			srcSlice := rgba.Pix[srcOffset : srcOffset+4]
-			destSlice := result.Pix[destOffset : destOffset+3]
-			destSlice[0], destSlice[1], destSlice[2] = hsv_color.RGB8ToHSV(srcSlice[0], srcSlice[1], srcSlice[2])
-
-			srcOffset += 4
-			destOffset += 3
+			result.Set(x, y, src.At(x, y))
 		}
 	}
 	return result
