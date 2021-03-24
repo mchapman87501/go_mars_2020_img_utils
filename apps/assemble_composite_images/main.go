@@ -94,7 +94,7 @@ func main() {
 		log.Fatal("Could not instantiate image DB:", err)
 	}
 
-	cameras := []string{"NAVCAM_RIGHT"} //imageDB.Cameras()
+	cameras := imageDB.Cameras()
 	for _, camera := range cameras {
 		fmt.Println("Finding composite image sets from", camera)
 		imageSets, err := lib.GetCompositeImageSets(imageDB, camera)
