@@ -35,6 +35,11 @@ const schema string = `CREATE TABLE IF NOT EXISTS Images (
 		cam_pos_z REAL,
 
 		sample_type TEXT NOT NULL,
+		-- 'color_type' indicates whether the image contains
+		-- full color (i.e., r, g, b), a single color separation,
+		-- is a full sensor readout that needs to be de-mosaiced, etc.
+		-- The value is taken from the 3rd letter of the image ID.
+		color_type TEXT NOT NULL,
 
 		small_url TEXT,
 		full_res_url TEXT,
@@ -125,6 +130,7 @@ func (idb *ImageDB) prepareUpdateOne() (*sql.Stmt, error) {
 		cam_model_type,
 		cam_pos_x, cam_pos_y, cam_pos_z,
 		sample_type,
+		color_type,
 		small_url, full_res_url, json_url,
 		date_taken_utc,
 		attitude, drive, site,
@@ -139,6 +145,7 @@ func (idb *ImageDB) prepareUpdateOne() (*sql.Stmt, error) {
 		?, ?, ?,
 		?,
 		?, ?, ?,
+		?,
 		?,
 		?, ?, ?,
 		?,
@@ -163,6 +170,8 @@ func addOrUpdateOne(statement *sql.Stmt, record ImageInfo) error {
 
 	extXYZ := append(record.Extended.XYZ, nan, nan, nan)
 
+	colorType := getColorTypeStr(record.ImageID)
+
 	_, err := statement.Exec(
 		record.ImageID,
 		record.Credit,
@@ -174,6 +183,7 @@ func addOrUpdateOne(statement *sql.Stmt, record ImageInfo) error {
 		record.Camera.CameraModelType,
 		camPos[0], camPos[1], camPos[2],
 		record.SampleType,
+		colorType,
 		record.ImageFiles.Small, record.ImageFiles.FullRes, record.JsonLink,
 		record.DateTakenUtc, attitudeStr, record.Drive, record.Site,
 		record.Extended.MastAzimuth, record.Extended.MastElevation,
@@ -184,6 +194,13 @@ func addOrUpdateOne(statement *sql.Stmt, record ImageInfo) error {
 		record.Extended.Dimension.Width, record.Extended.Dimension.Height,
 	)
 	return err
+}
+
+func getColorTypeStr(imageID string) string {
+	if len(imageID) < 3 {
+		return "U" // Unknown - hope this doesn't collide w. future image IDs
+	}
+	return string(imageID[2])
 }
 
 // Get the names of all cameras in the database.

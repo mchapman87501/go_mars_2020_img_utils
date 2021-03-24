@@ -31,7 +31,7 @@ func demosaiced(cache lib.ImageCache, record lib.CompositeImageInfo) (image.Imag
 	if err != nil {
 		return image, err
 	}
-	if record.ColorType == lib.ICT_E {
+	if record.ColorType == "E" {
 		return lib.DemosaicRGBGray(image)
 	}
 	return image, nil

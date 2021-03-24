@@ -7,6 +7,7 @@ import (
 	"math"
 )
 
+// Note about ColorType:
 // The 3rd letter of the image ID can tell what type of color data the image contains:
 // R -- image is (usually) PNG RGB, but it represents the red band of
 //      a full image
@@ -16,36 +17,6 @@ import (
 //      readout of all of the pixels underneath the Bayer RGGB color filter
 //      array, and it needs to be de-mosaiced to create a full color image
 // F -- PNG RGB, all color channels, already de-mosaiced
-type ImageColorType int
-
-const (
-	ICT_R       = 1
-	ICT_G       = 2
-	ICT_B       = 3
-	ICT_E       = 4
-	ICT_F       = 5
-	ICT_Unknown = 6
-)
-
-func getColorType(imageID string) ImageColorType {
-	if len(imageID) < 3 {
-		return ICT_Unknown
-	}
-	switch imageID[2] {
-	case 'R':
-		return ICT_R
-	case 'G':
-		return ICT_G
-	case 'B':
-		return ICT_B
-	case 'E':
-		return ICT_E
-	case 'F':
-		return ICT_F
-	default:
-		return ICT_Unknown
-	}
-}
 
 type CompositeImageInfo struct {
 	ImageID string
@@ -56,7 +27,7 @@ type CompositeImageInfo struct {
 	SubframeRect image.Rectangle
 
 	Camera    string
-	ColorType ImageColorType
+	ColorType string
 }
 
 func valOrNan(fval sql.NullFloat64) float64 {
@@ -85,17 +56,18 @@ func GetCompositeImageInfoRecords(idb ImageDB, camera string) ([]CompositeImageI
 		// Hm... SQLite3 typically stores NaN as NULL?
 		// So hints StackOverflow
 		sclkValue := sql.NullFloat64{}
+		colorTypeStr := "U"
 
 		err := rows.Scan(
 			&record.ImageID, &record.Site, &record.Drive, &sclkValue,
-			&x, &y, &width, &height, &record.Camera)
+			&colorTypeStr, &x, &y, &width, &height, &record.Camera)
 		if err != nil {
 			err = fmt.Errorf("error extracting row %v: %v", irow, err)
 			return result, err
 		}
 		record.Sclk = valOrNan(sclkValue)
 		record.SubframeRect = image.Rect(x, y, x+width, y+height)
-		record.ColorType = getColorType(record.ImageID)
+		record.ColorType = colorTypeStr
 		result = append(result, record)
 	}
 
@@ -104,7 +76,7 @@ func GetCompositeImageInfoRecords(idb ImageDB, camera string) ([]CompositeImageI
 
 func retrieveImageSets(idb ImageDB, camera string) (*sql.Rows, error) {
 	query := `SELECT
-			image_id, site, drive, ext_sclk,
+			image_id, site, drive, ext_sclk, color_type,
 			ext_sf_left x, ext_sf_top y,
 			ext_sf_width w, ext_sf_height h,
 			cam_instrument
@@ -116,7 +88,7 @@ func retrieveImageSets(idb ImageDB, camera string) (*sql.Rows, error) {
 			AND y NOT NULL
 			AND w NOT NULL
 			and h NOT NULL
-		ORDER BY site, drive, ext_sclk, image_id`
+		ORDER BY site, drive, ext_sclk, color_type, image_id`
 
 	return idb.DB.Query(query, camera)
 }
@@ -149,7 +121,7 @@ func (imageSet CompositeImageSet) Name() string {
 		return "empty_image_set"
 	}
 	firstImage := imageSet[0]
-	return fmt.Sprintf("%v_%.0f_%v_%v", firstImage.Camera, firstImage.Sclk, firstImage.Site, firstImage.Drive)
+	return fmt.Sprintf("%v_%v_%.0f_%v_%v", firstImage.Camera, firstImage.ColorType, firstImage.Sclk, firstImage.Site, firstImage.Drive)
 }
 
 func GetCompositeImageSets(idb ImageDB, camera string) ([]CompositeImageSet, error) {
@@ -161,15 +133,19 @@ func GetCompositeImageSets(idb ImageDB, camera string) ([]CompositeImageSet, err
 	}
 
 	prevSclk := -1.0
+	prevColorType := "U"
 	currImages := []CompositeImageInfo{}
 	for _, record := range records {
-		if record.Sclk != prevSclk {
+		// Images constituting a single composite have the same sclk and the
+		// same color type.
+		if (record.Sclk != prevSclk) || (record.ColorType != prevColorType) {
 			// Composite image sets must have more than one constituent image.
 			if len(currImages) > 1 {
 				result = append(result, currImages)
 			}
 			currImages = []CompositeImageInfo{}
 			prevSclk = record.Sclk
+			prevColorType = record.ColorType
 		}
 		currImages = append(currImages, record)
 	}
