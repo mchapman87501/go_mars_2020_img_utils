@@ -4,7 +4,7 @@ import (
 	"image"
 	"image/color"
 
-	hsv_color "com.dmoonc/mchapman87501/mars_2020_img_utils/lib/image/color"
+	mars_lib_color "com.dmoonc/mchapman87501/mars_2020_img_utils/lib/image/color"
 )
 
 type HSV struct {
@@ -14,7 +14,7 @@ type HSV struct {
 	Rect   image.Rectangle
 }
 
-func (p *HSV) ColorModel() color.Model { return hsv_color.HSVModel }
+func (p *HSV) ColorModel() color.Model { return mars_lib_color.HSVModel }
 
 func (p *HSV) Bounds() image.Rectangle { return p.Rect }
 
@@ -22,16 +22,16 @@ func (p *HSV) At(x, y int) color.Color {
 	return p.HSVAt(x, y)
 }
 
-func (p *HSV) HSVAt(x, y int) hsv_color.HSV {
+func (p *HSV) HSVAt(x, y int) mars_lib_color.HSV {
 	if !(image.Point{x, y}.In(p.Rect)) {
-		return hsv_color.HSV{
+		return mars_lib_color.HSV{
 			H: 0,
 			S: 0,
 			V: 0,
 		}
 	}
 	i := p.PixOffset(x, y)
-	result := hsv_color.HSV{H: p.Pix[i], S: p.Pix[i+1], V: p.Pix[i+2]}
+	result := mars_lib_color.HSV{H: p.Pix[i], S: p.Pix[i+1], V: p.Pix[i+2]}
 	return result
 }
 
@@ -43,7 +43,7 @@ func (p *HSV) Set(x, y int, c color.Color) {
 	if !(image.Point{x, y}.In(p.Rect)) {
 		return
 	}
-	c1 := hsv_color.HSVModel.Convert(c).(hsv_color.HSV)
+	c1 := mars_lib_color.HSVModel.Convert(c).(mars_lib_color.HSV)
 
 	i := p.PixOffset(x, y)
 	s := p.Pix[i : i+3 : i+3]
@@ -52,7 +52,7 @@ func (p *HSV) Set(x, y int, c color.Color) {
 	s[2] = c1.V
 }
 
-func (p *HSV) SetHSV(x, y int, c hsv_color.HSV) {
+func (p *HSV) SetHSV(x, y int, c mars_lib_color.HSV) {
 	if !(image.Point{x, y}.In(p.Rect)) {
 		return
 	}
