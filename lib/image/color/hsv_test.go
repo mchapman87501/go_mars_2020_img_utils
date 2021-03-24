@@ -402,22 +402,6 @@ func TestHSVToRGB(t *testing.T) {
 	}
 }
 
-func TestRGB8ToHSV(t *testing.T) {
-	testCases := []struct {
-		r, g, b             uint8
-		hWant, sWant, vWant float64
-	}{
-		{50, 0, 0, 0.0, 1.0, 50.0 / 255.0},
-		{255, 255, 255, 0.0, 0.0, 1.0},
-	}
-	for _, tc := range testCases {
-		hGot, sGot, vGot := RGB8ToHSV(tc.r, tc.g, tc.b)
-		if !(eq(tc.hWant, hGot) && eq(tc.sWant, sGot) && eq(tc.vWant, vGot)) {
-			t.Errorf("RGB8ToHSV failed for (%v, %v, %v): want (%v, %v, %v), got (%v, %v, %v)", tc.r, tc.g, tc.b, tc.hWant, tc.sWant, tc.vWant, hGot, sGot, vGot)
-		}
-	}
-}
-
 func TestRGBToHSVRoundTrip(t *testing.T) {
 	var intensity uint32
 	for intensity = 0; intensity <= 0xff; intensity++ {

@@ -85,17 +85,6 @@ func RGBToHSV(r, g, b uint32) (float64, float64, float64) {
 	return NormRGBToHSV(norm(r), norm(g), norm(b))
 }
 
-func RGB8ToHSV(r, g, b uint8) (float64, float64, float64) {
-	// This is blindly copied from image/color/color.go.
-	r32 := uint32(r)
-	r32 |= r32 << 8
-	g32 := uint32(g)
-	g32 |= g32 << 8
-	b32 := uint32(b)
-	b32 |= b32 << 8
-	return RGBToHSV(r32, g32, b32)
-}
-
 // Convert HSV color to "normalized" RGB,
 // with each result color component in 0.0 ... 1.0
 // Round-trip RGB->HSV->RGB does not always succeed.
