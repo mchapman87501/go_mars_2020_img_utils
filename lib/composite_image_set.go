@@ -83,6 +83,7 @@ func retrieveImageSets(idb ImageDB, camera string) (*sql.Rows, error) {
 		FROM Images
 		WHERE cam_instrument = ?
 			AND sample_type = 'Full'
+			AND color_type = 'E'
 			AND ext_scale_factor = 1
 			AND x NOT NULL
 			AND y NOT NULL

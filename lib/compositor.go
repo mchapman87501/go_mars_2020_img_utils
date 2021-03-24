@@ -23,36 +23,45 @@ func NewCompositor(rect image.Rectangle) Compositor {
 	}
 }
 
-// Add a new image.  Adjust its contrast range as necessary to match
+// Add a new image.  Adjust its colors as necessary to match
 // any overlapping image data that has already been composited.
 func (comp *Compositor) AddImage(image image.Image, subframeRect image.Rectangle) {
-	adjustedImage := comp.matchValue(image, subframeRect)
-	// First draft: don't worry about contrast matching.  Just create the composite image.
+	adjustedImage := comp.matchColors(image, subframeRect)
 	srcPoint := adjustedImage.Bounds().Min
 	draw.Src.Draw(comp.Result, subframeRect, adjustedImage, srcPoint)
 	comp.addedAreas = append(comp.addedAreas, subframeRect)
 }
 
-type valueAdjustmentMap map[float64]float64
+type chanAdjustmentMap map[float64]float64
+type cntMap map[float64]float64
 
-func (comp *Compositor) matchValue(image image.Image, destRect image.Rectangle) image.Image {
+type adjustmentMap struct {
+	H, S, V chanAdjustmentMap
+}
+
+func (comp *Compositor) matchColors(image image.Image, destRect image.Rectangle) image.Image {
 	result := hsv_image.HSVFromImage(image)
 
-	vam := comp.makeValueAdjustmentMap(result, destRect)
-	adjustValues(result, vam)
+	adjustments := comp.makeValueAdjustmentMap(result, destRect)
+	adjustColors(result, adjustments)
 
 	return result
 }
 
-func (comp *Compositor) makeValueAdjustmentMap(hsvImage *hsv_image.HSV, destRect image.Rectangle) valueAdjustmentMap {
+func (comp *Compositor) makeValueAdjustmentMap(hsvImage *hsv_image.HSV, destRect image.Rectangle) *adjustmentMap {
 	xTransform := destRect.Min.X - hsvImage.Bounds().Min.X
 	yTransform := destRect.Min.Y - hsvImage.Bounds().Min.Y
 
 	// Build an adjustment mapping, for all overlapping addedAreas, that
 	// maps from result's pixel V channel to that of the corresponding
 	// comp.Result pixel.
-	result := make(valueAdjustmentMap)
-	counts := make(map[float64]float64)
+	h := make(chanAdjustmentMap)
+	s := make(chanAdjustmentMap)
+	v := make(chanAdjustmentMap)
+
+	hCounts := make(cntMap)
+	sCounts := make(cntMap)
+	vCounts := make(cntMap)
 
 	for _, rect := range comp.addedAreas {
 		overlap := rect.Intersect(destRect)
@@ -69,42 +78,61 @@ func (comp *Compositor) makeValueAdjustmentMap(hsvImage *hsv_image.HSV, destRect
 					// channel value.
 					// Use the average: sum
 					// all mappings, then divide by the number of mappings.
-					result[srcPix.V] += targetPix.V
-					counts[srcPix.V] += 1
+					h[srcPix.H] += targetPix.H
+					s[srcPix.S] += targetPix.S
+					v[srcPix.V] += targetPix.V
+
+					hCounts[srcPix.H] += 1
+					sCounts[srcPix.S] += 1
+					vCounts[srcPix.V] += 1
 				}
 			}
 		}
 	}
 
-	// Overlapping regions may not cover the full gamut of Values.
+	// Overlapping regions may not cover the full gamut of channel values.
+	// Add a default 1:1 mapping for extreme values, to aid interpolation.
+	addExtrema(h, hCounts)
+	addExtrema(s, sCounts)
+	addExtrema(v, vCounts)
+
+	normalizeCAM(h, hCounts)
+	normalizeCAM(s, sCounts)
+	normalizeCAM(v, vCounts)
+
+	return &adjustmentMap{H: h, S: s, V: v}
+}
+
+func addExtrema(cam chanAdjustmentMap, counts cntMap) {
+	// Overlapping regions may not cover the full gamut of channel values.
 	// Add a default 1:1 mapping for extreme values, to aid interpolation.
 	extrema := []float64{0.0, 1.0}
 	for _, v := range extrema {
-		_, ok := result[v]
+		_, ok := cam[v]
 		if !ok {
-			result[v] = v
+			cam[v] = v
 			counts[v] = 1
 		}
 	}
-
-	for k := range result {
-		result[k] /= counts[k]
-	}
-
-	return result
 }
 
-func adjustValues(hsvImage *hsv_image.HSV, mapping valueAdjustmentMap) {
-	interpolator := NewFloat64Interpolator(mapping)
+func normalizeCAM(cam chanAdjustmentMap, counts cntMap) {
+	for k := range cam {
+		cam[k] /= counts[k]
+	}
+}
+
+func adjustColors(hsvImage *hsv_image.HSV, adjustments *adjustmentMap) {
+	hInterp := NewFloat64Interpolator(adjustments.H)
+	sInterp := NewFloat64Interpolator(adjustments.S)
+	vInterp := NewFloat64Interpolator(adjustments.V)
+
 	for y := hsvImage.Bounds().Min.Y; y < hsvImage.Bounds().Max.Y; y++ {
 		for x := hsvImage.Bounds().Min.X; x < hsvImage.Bounds().Max.X; x++ {
 			pix := hsvImage.HSVAt(x, y)
-			pix.V = interpolator.Interp(pix.V)
-			if pix.V < 0 {
-				pix.V = 0.0
-			} else if pix.V > 1 {
-				pix.V = 1.0
-			}
+			pix.H = hInterp.Interp(pix.H)
+			pix.S = sInterp.Interp(pix.S)
+			pix.V = vInterp.Interp(pix.V)
 			hsvImage.SetHSV(x, y, pix)
 		}
 	}
@@ -112,6 +140,7 @@ func adjustValues(hsvImage *hsv_image.HSV, mapping valueAdjustmentMap) {
 
 // Ensure the range of Value component values lies within 0.0 ... 1.0
 func (comp *Compositor) CompressDynamicRange() {
+	// I think this is completely un-necessary...
 	pixelStride := 3
 	minValue := 1.0
 	maxValue := 0.0
