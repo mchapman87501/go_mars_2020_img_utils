@@ -22,6 +22,7 @@ func savePNG(image image.Image, filename string) {
 	if err != nil {
 		fmt.Printf("Error saving %v: %v\n", filename, err)
 	}
+	log.Fatal("TESTING")
 }
 
 func demosaiced(cache lib.ImageCache, record lib.CompositeImageInfo) (image.Image, error) {
@@ -63,6 +64,7 @@ func assembleImageSet(cache lib.ImageCache, imageSet lib.CompositeImageSet) {
 		if err != nil {
 			fmt.Println("Error retrieving full size image", record.ImageID, "- skipping")
 		} else {
+			fmt.Println("Add", record.ImageID)
 			compositor.AddImage(image, record.SubframeRect)
 		}
 	}

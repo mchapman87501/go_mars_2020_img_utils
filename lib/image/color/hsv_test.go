@@ -454,3 +454,30 @@ func TestNormRGBToHSVRoundTrip(t *testing.T) {
 		}
 	}
 }
+
+func TestNormRGBToHSVGrayRT(t *testing.T) {
+	for intensity := 0.0; intensity <= 1.0; intensity += 0.01 {
+		h, s, v := NormRGBToHSV(intensity, intensity, intensity)
+		r, g, b := HSVToNormRGB(h, s, v)
+		if !(eq(r, intensity) && eq(g, intensity) && eq(b, intensity)) {
+			t.Errorf(
+				"Norm round-trip failed: (%v, %v, %v) -> (%v, %v, %v) -> (%v, %v, %v)",
+				intensity, intensity, intensity, h, s, v, r, g, b)
+		}
+	}
+}
+
+func TestColorHSVRGBA(t *testing.T) {
+	// Test the HSV.RGBA function
+	for intensity := 0.0; intensity <= 1.0; intensity += 0.02 {
+		expected := uint32(intensity * 0xffff)
+		hsv := HSV{H: 0.0, S: 0.0, V: intensity}
+		r, g, b, a := hsv.RGBA()
+		if !((r == expected) && (g == expected) && (b == expected)) {
+			t.Errorf("Round trip failed for %v; expected rgb=%v, got (%v, %v, %v)", intensity, expected, r, g, b)
+		}
+		if a != 0xffff {
+			t.Errorf("Expected full opaque alpha 0xffff, got %v", a)
+		}
+	}
+}

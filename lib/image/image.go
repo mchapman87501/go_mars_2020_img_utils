@@ -81,6 +81,11 @@ func (p *HSV) Opaque() bool {
 	return true
 }
 
+// Renormalize the Value channel to ensure all V values lie in 0.0 ... 1.0
+func (p *HSV) Renormalize() {
+	// TBD
+}
+
 func NewHSV(r image.Rectangle) *HSV {
 	area := r.Dx() * r.Dy()
 	channels := 3

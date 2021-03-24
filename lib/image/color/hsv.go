@@ -43,37 +43,37 @@ func denorm(v float64) uint32 {
 
 func rgbToHue(rn, gn, bn, minComp, maxComp float64) float64 {
 	const hueSextant = 1.0 / 6.0
-	dComp := maxComp - minComp
+	chroma := maxComp - minComp
 
 	// These exact comparisons should be ok given that minComp and maxComp
 	// are each set to one of rn, gn or bn.
-	if minComp == maxComp {
+	if chroma <= 0.0 {
 		return 0.0
 	} else if rn == maxComp {
-		result := hueSextant * (gn - bn) / dComp
+		result := hueSextant * (gn - bn) / chroma
 		if result < 0.0 {
 			result += 1
 		}
 		return result
 	} else if gn == maxComp {
-		return hueSextant * ((bn-rn)/dComp + 2.0)
+		return hueSextant * ((bn-rn)/chroma + 2.0)
 	} else {
 		// bn == maxComp
-		return hueSextant * ((rn-gn)/dComp + 3.0)
+		return hueSextant * ((rn-gn)/chroma + 4.0)
 	}
 }
 
 // Convert "normalized" RGB, with all components in 0.0 ... 1.0, to HSV.
 // Returns values in the range 0.0 ... 1.0
 func NormRGBToHSV(rn, gn, bn float64) (float64, float64, float64) {
-	// This derives from https://github.com/gtaylor/python-colormath.
+	// This derives from Wikipedia.
 	maxComp := max(rn, gn, bn)
 	minComp := min(rn, gn, bn)
 
 	h := rgbToHue(rn, gn, bn, minComp, maxComp)
 	s := 0.0
 	if maxComp > 0.0 {
-		s = 1.0 - (minComp / maxComp)
+		s = (maxComp - minComp) / maxComp
 	}
 	v := maxComp
 	return h, s, v
@@ -156,15 +156,8 @@ type HSV struct {
 
 // Conform to color.Color interface:
 func (c HSV) RGBA() (r, g, b, a uint32) {
-	r8, g8, b8 := HSVToRGB(c.H, c.S, c.V)
-	r = uint32(r8)
-	// Blindly copying from image/color/color.go - '|=' instead of '='?
-	r |= r << 8
-	g = uint32(g8)
-	g |= g << 8
-	b = uint32(b8)
-	b |= b << 8
-	a = math.MaxUint32
+	r, g, b = HSVToRGB(c.H, c.S, c.V)
+	a = 0xffff
 	return
 }
 
