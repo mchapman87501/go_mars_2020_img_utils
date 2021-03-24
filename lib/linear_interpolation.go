@@ -1,7 +1,6 @@
 package lib
 
 import (
-	"fmt"
 	"sort"
 )
 
@@ -18,12 +17,6 @@ func NewFloat64Interpolator(yVals map[float64]float64) *Float64Interpolator {
 		xVals = append(xVals, k)
 	}
 	sort.Float64s(xVals)
-
-	fmt.Println("Interpolate:")
-	for _, x := range xVals {
-		fmt.Printf("%.4f : %.4f\n", x, yVals[x])
-	}
-	fmt.Println("")
 
 	return &Float64Interpolator{yVals: yVals, xVals: xVals}
 }

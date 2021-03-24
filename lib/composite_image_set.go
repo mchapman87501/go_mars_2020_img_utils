@@ -149,7 +149,7 @@ func (imageSet CompositeImageSet) Name() string {
 		return "empty_image_set"
 	}
 	firstImage := imageSet[0]
-	return fmt.Sprintf("image_set_%v_%v_%v_%v", firstImage.Camera, firstImage.Sclk, firstImage.Site, firstImage.Drive)
+	return fmt.Sprintf("%v_%v_%v_%v", firstImage.Camera, firstImage.Sclk, firstImage.Site, firstImage.Drive)
 }
 
 func GetCompositeImageSets(idb ImageDB, camera string) ([]CompositeImageSet, error) {

@@ -11,6 +11,8 @@ import (
 	"com.dmoonc/mchapman87501/mars_2020_img_utils/lib"
 )
 
+const outDir = "composite_images/"
+
 func savePNG(image image.Image, filename string) {
 	outf, err := os.Create(filename)
 	if err != nil {
@@ -22,7 +24,6 @@ func savePNG(image image.Image, filename string) {
 	if err != nil {
 		fmt.Printf("Error saving %v: %v\n", filename, err)
 	}
-	log.Fatal("TESTING")
 }
 
 func demosaiced(cache lib.ImageCache, record lib.CompositeImageInfo) (image.Image, error) {
@@ -37,7 +38,7 @@ func demosaiced(cache lib.ImageCache, record lib.CompositeImageInfo) (image.Imag
 }
 
 func assembleImageSet(cache lib.ImageCache, imageSet lib.CompositeImageSet) {
-	filename := imageSet.Name() + ".png"
+	filename := outDir + imageSet.Name() + ".png"
 	fmt.Println("Processing", filename)
 
 	if len(imageSet) < 2 {
@@ -64,7 +65,7 @@ func assembleImageSet(cache lib.ImageCache, imageSet lib.CompositeImageSet) {
 		if err != nil {
 			fmt.Println("Error retrieving full size image", record.ImageID, "- skipping")
 		} else {
-			fmt.Println("Add", record.ImageID)
+			fmt.Println("    Add", record.ImageID)
 			compositor.AddImage(image, record.SubframeRect)
 		}
 	}
@@ -83,6 +84,11 @@ func assembleImageSets(imageDB lib.ImageDB, imageSets []lib.CompositeImageSet) {
 }
 
 func main() {
+	err := os.MkdirAll(outDir, 0755)
+	if err != nil {
+		log.Fatal("Could not create output directory", outDir, ":", err)
+	}
+
 	imageDB, err := lib.NewImageDB()
 	if err != nil {
 		log.Fatal("Could not instantiate image DB:", err)
