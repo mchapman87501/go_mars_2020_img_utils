@@ -69,7 +69,7 @@ func assembleImageSet(cache lib.ImageCache, imageSet lib.CompositeImageSet) {
 			compositor.AddImage(image, record.SubframeRect)
 		}
 	}
-
+	compositor.CompressDynamicRange()
 	savePNG(compositor.Result, filename)
 }
 

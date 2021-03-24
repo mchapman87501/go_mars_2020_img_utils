@@ -109,3 +109,27 @@ func adjustValues(hsvImage *hsv_image.HSV, mapping valueAdjustmentMap) {
 		}
 	}
 }
+
+// Ensure the range of Value component values lies within 0.0 ... 1.0
+func (comp *Compositor) CompressDynamicRange() {
+	pixelStride := 3
+	minValue := 1.0
+	maxValue := 0.0
+	for i := 2; i < len(comp.Result.Pix); i += pixelStride {
+		currValue := comp.Result.Pix[i]
+		if minValue > currValue {
+			minValue = currValue
+		}
+		if maxValue < currValue {
+			maxValue = currValue
+		}
+	}
+
+	if (minValue < 0.0) || (maxValue > 1.0) {
+		dValue := maxValue - minValue
+		scale := 1.0 / dValue
+		for i := 2; i < len(comp.Result.Pix); i += pixelStride {
+			comp.Result.Pix[i] = (comp.Result.Pix[i] - minValue) * scale
+		}
+	}
+}
