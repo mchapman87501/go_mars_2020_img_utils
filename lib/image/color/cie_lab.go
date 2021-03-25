@@ -46,22 +46,23 @@ func rgbToCIELab(r, g, b uint32) (labL, laba, labb float64) {
 
 const cieE = 216.0 / 24389.0
 
-const cieDelta float64 = 6.0 / 29.0
-const cieD3 = cieDelta * cieDelta * cieDelta
-
 // Caveat: these match python colormath, rather than Wikipedia.
-const d65IllumX = 0.950489
+const d65IllumX = 0.95047 // 0.950489
 const d65IllumY = 1.0
-const d65IllumZ = 1.08884
+const d65IllumZ = 1.08883 // 1.08884
 
 func cieLabD65ToXYZ(labL, laba, labb float64) (x, y, z float64) {
 	ty := (labL + 16.0) / 116.0
-	tx := laba/500.0 + ty
+	tx := ty + laba/500.0
 	tz := ty - labb/200.0
 
-	x = d65IllumX * scaleLabD65ToXYZ(tx)
-	y = d65IllumY * scaleLabD65ToXYZ(ty)
-	z = d65IllumZ * scaleLabD65ToXYZ(tz)
+	sx := scaleLabD65ToXYZ(tx)
+	sy := scaleLabD65ToXYZ(ty)
+	sz := scaleLabD65ToXYZ(tz)
+
+	x = d65IllumX * sx
+	y = d65IllumY * sy
+	z = d65IllumZ * sz
 	return
 }
 
@@ -81,10 +82,11 @@ func cieXYZToLabD65(x, y, z float64) (labL, laba, labb float64) {
 }
 
 func scaleLabD65ToXYZ(component float64) float64 {
-	if component > cieDelta {
-		return component * component * component
+	cubed := component * component * component
+	if cubed > cieE {
+		return cubed
 	}
-	return 3.0 * cieD3 * (component - 4.0/29.0)
+	return (component - 16.0/116.0) / 7.787
 }
 
 func scaleXYZToLabD65(component float64) float64 {

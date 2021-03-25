@@ -1,13 +1,12 @@
 package color
 
 import (
-	"fmt"
 	"testing"
 )
 
 // These test cases were produced using Python colormath:
 // https://github.com/gtaylor/python-colormath.git
-var labTestCases = []struct {
+var rgbToLabTestCases = []struct {
 	r, g, b          uint32  // input
 	labL, laba, labb float64 // expected output
 }{
@@ -82,7 +81,7 @@ var labTestCases = []struct {
 }
 
 func TestRGBToLab(t *testing.T) {
-	for _, tc := range labTestCases {
+	for _, tc := range rgbToLabTestCases {
 		labL, laba, labb := rgbToCIELab(tc.r, tc.g, tc.b)
 
 		// Since I haven't written tests for DeltaECIE2000, this is pretty
@@ -97,8 +96,82 @@ func TestRGBToLab(t *testing.T) {
 				hexTupleStr(tc.r, tc.g, tc.b),
 				fTupleStr(tc.labL, tc.laba, tc.labb),
 				fTupleStr(labL, laba, labb))
-		} else {
-			fmt.Println("Δe:", dE)
+			// } else {
+			// 	fmt.Println("Δe:", dE)
+		}
+	}
+}
+
+var labToRGBTestCases = []struct {
+	labL, laba, labb float64
+	r, g, b          uint32
+}{
+	{0.00, -128.00, -128.00, 0x0000, 0x4073, 0xc2dc},
+	{0.00, -128.00, -64.00, 0x0000, 0x346f, 0x5d16},
+	{0.00, -128.00, 0.00, 0x0000, 0x30d2, 0x0000},
+	{0.00, -128.00, 64.00, 0x0000, 0x2f2f, 0x0000},
+	{0.00, -128.00, 127.00, 0x0000, 0x2d82, 0x0000},
+	{0.00, -31.50, -128.00, 0x0000, 0x2f7a, 0xc312},
+	{0.00, -31.50, -64.00, 0x0000, 0x1c63, 0x5d9f},
+	{0.00, -31.50, 0.00, 0x0000, 0x14fe, 0x0000},
+	{0.00, -31.50, 64.00, 0x0000, 0x110a, 0x0000},
+	{0.00, -31.50, 127.00, 0x261c, 0x0c4d, 0x0000},
+	{0.00, 0.00, -128.00, 0x0000, 0x283e, 0xc324},
+	{0.00, 0.00, -64.00, 0x0000, 0x0dee, 0x5dcc},
+	{0.00, 0.00, 0.00, 0x0000, 0x0000, 0x0000},
+	{0.00, 0.00, 64.00, 0x294c, 0x0000, 0x0000},
+	{0.00, 0.00, 127.00, 0x3b99, 0x0000, 0x0000},
+	{0.00, 64.00, -128.00, 0x0000, 0x0cea, 0xc34d},
+	{0.00, 64.00, -64.00, 0x1181, 0x0000, 0x5e33},
+	{0.00, 64.00, 0.00, 0x4456, 0x0000, 0x034a},
+	{0.00, 64.00, 64.00, 0x5052, 0x0000, 0x0000},
+	{0.00, 64.00, 127.00, 0x5a54, 0x0000, 0x0000},
+	{0.00, 127.00, -128.00, 0x0000, 0x0000, 0xc3a7},
+	{0.00, 127.00, -64.00, 0x668f, 0x0000, 0x5f14},
+	{0.00, 127.00, 0.00, 0x77c1, 0x0000, 0x0a86},
+	{0.00, 127.00, 64.00, 0x7e3e, 0x0000, 0x0000},
+	{0.00, 127.00, 127.00, 0x843e, 0x0000, 0x0000},
+	{33.00, -128.00, -64.00, 0x0000, 0x6ea2, 0xb498},
+	{33.00, -128.00, 0.00, 0x0000, 0x6978, 0x4bee},
+	{33.00, -128.00, 64.00, 0x0000, 0x6830, 0x0000},
+	{33.00, -128.00, 127.00, 0x0000, 0x6788, 0x0000},
+	{33.00, -31.50, -64.00, 0x0000, 0x6071, 0xb4fe},
+	{33.00, -31.50, 0.00, 0x0000, 0x5a43, 0x4d1a},
+	{33.00, -31.50, 64.00, 0x303d, 0x58b4, 0x0000},
+	{33.00, -31.50, 127.00, 0x4072, 0x57e7, 0x0000},
+	{33.00, 0.00, -64.00, 0x0000, 0x552a, 0xb544},
+	{33.00, 0.00, 0.00, 0x4de5, 0x4de4, 0x4de3},
+	{33.00, 0.00, 64.00, 0x6114, 0x4c06, 0x0000},
+	{33.00, 0.00, 127.00, 0x6938, 0x4b0f, 0x0000},
+	{33.00, 64.00, -64.00, 0x74c1, 0x129b, 0xb61e},
+	{33.00, 64.00, 0.00, 0xa1b8, 0x0000, 0x504c},
+	{33.00, 64.00, 64.00, 0xaa54, 0x0000, 0x0000},
+	{33.00, 64.00, 127.00, 0xae7a, 0x0000, 0x0000},
+	{33.00, 127.00, -64.00, 0xce83, 0x0000, 0xb771},
+	{33.00, 127.00, 0.00, 0xe790, 0x0000, 0x53e7},
+	{33.00, 127.00, 64.00, 0xed0e, 0x0000, 0x0000},
+	{33.00, 127.00, 127.00, 0xefc5, 0x0000, 0x0000},
+	{67.00, -128.00, 0.00, 0x0000, 0xce62, 0xa0ba},
+	{67.00, -128.00, 64.00, 0x0000, 0xcc4f, 0x0558},
+	{67.00, -128.00, 127.00, 0x0000, 0xcbd6, 0x0000},
+	{67.00, -31.50, 0.00, 0x56a8, 0xb32b, 0xa2b0},
+	{67.00, -31.50, 64.00, 0x8bc1, 0xb0ab, 0x1b71},
+	{67.00, -31.50, 127.00, 0x94b1, 0xb018, 0x0000},
+	{67.00, 0.00, 0.00, 0xa3a7, 0xa3a6, 0xa3a3},
+	{67.00, 0.00, 64.00, 0xc17c, 0xa0d5, 0x21f4},
+	{67.00, 0.00, 127.00, 0xc77a, 0xa02f, 0x0000},
+}
+
+func TestLabToRGB(t *testing.T) {
+	for _, tc := range labToRGBTestCases {
+		r, g, b := cieLabToRGB(tc.labL, tc.laba, tc.labb)
+
+		if !(eq_u(r, tc.r) && eq_u(g, tc.g) && eq_u(b, tc.b)) {
+			t.Errorf(
+				"cieLabToRGB%v: want %v, got %v",
+				fTupleStr(tc.labL, tc.laba, tc.labb),
+				hexTupleStr(tc.r, tc.g, tc.b),
+				hexTupleStr(r, g, b))
 		}
 	}
 }

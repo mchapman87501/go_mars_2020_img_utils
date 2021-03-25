@@ -111,11 +111,21 @@ func TestRGBToXYZ(t *testing.T) {
 	}
 }
 
-func ueq(a, b uint32) bool {
+func eq_u(a, b uint32) bool {
+	var diff uint32
+
 	if a < b {
-		return (b - a) <= 1
+		diff = b - a
+	} else {
+		diff = a - b
 	}
-	return (a - b) <= 1
+
+	result := diff <= 3
+
+	if !result {
+		fmt.Printf("FAIL eq_u(%d, %d); diff=%d\n", a, b, diff)
+	}
+	return result
 }
 
 func TestRGBToXYZToRGB(t *testing.T) {
@@ -123,7 +133,7 @@ func TestRGBToXYZToRGB(t *testing.T) {
 		x, y, z := rgbToCIEXYZ(tc.r, tc.g, tc.b)
 		r, g, b := cieXYZToRGB(x, y, z)
 		// If every component is within 0x0001 of wanted, that's close enough.
-		if !(ueq(r, tc.r) && ueq(g, tc.g) && ueq(b, tc.b)) {
+		if !(eq_u(r, tc.r) && eq_u(g, tc.g) && eq_u(b, tc.b)) {
 			t.Errorf(
 				"rgbxyz round trip %v: got %v",
 				hexTupleStr(tc.r, tc.g, tc.b),
