@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"image"
 	"image/png"
@@ -17,6 +18,7 @@ func savePNG(image image.Image, filename string) {
 	outf, err := os.Create(filename)
 	if err != nil {
 		fmt.Printf("Error creating %v: %v\n", filename, err)
+		return
 	}
 	defer outf.Close()
 
@@ -38,12 +40,29 @@ func demosaiced(cache lib.ImageCache, record lib.CompositeImageInfo) (image.Imag
 }
 
 func saveMetadata(records lib.CompositeImageSet, filename string) {
-	// TBD
+	b, err := json.MarshalIndent(records, "", "  ")
+	if err != nil {
+		fmt.Println("Error marshaling composite image set to JSON:", err)
+	} else {
+		outf, err := os.Create(filename)
+		if err != nil {
+			fmt.Printf("Error creating %v: %v\n", filename, err)
+			return
+		}
+		defer outf.Close()
+		bytesWritten, err := outf.Write(b)
+		if err != nil {
+			fmt.Printf("Error writing %v: %v\n", filename, err)
+		}
+		if bytesWritten < len(b) {
+			fmt.Printf("Did not write all JSON data to %v.\n", filename)
+		}
+	}
 }
 
 func assembleImageSet(cache lib.ImageCache, imageSet lib.CompositeImageSet) {
 	filename := outDir + imageSet.Name() + ".png"
-	metadataFilename := outDir + imageSet.Name() + "_info.json"
+	metadataFilename := outDir + imageSet.Name() + "_metadata.json"
 
 	fmt.Println("Processing", filename)
 
