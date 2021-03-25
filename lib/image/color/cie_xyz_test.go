@@ -28,7 +28,7 @@ func hexTupleStr(values ...uint32) string {
 
 // These test cases were produced using Python colormath:
 // https://github.com/gtaylor/python-colormath.git
-var testCases = []struct {
+var xyzTestCases = []struct {
 	r, g, b uint32  // input
 	x, y, z float64 // expected output
 }{
@@ -99,7 +99,7 @@ var testCases = []struct {
 }
 
 func TestRGBToXYZ(t *testing.T) {
-	for _, tc := range testCases {
+	for _, tc := range xyzTestCases {
 		x, y, z := rgbToCIEXYZ(tc.r, tc.g, tc.b)
 		if !(eq(x, tc.x) && eq(y, tc.y) && eq(z, tc.z)) {
 			t.Errorf(
@@ -119,9 +119,9 @@ func ueq(a, b uint32) bool {
 }
 
 func TestRGBToXYZToRGB(t *testing.T) {
-	for _, tc := range testCases {
+	for _, tc := range xyzTestCases {
 		x, y, z := rgbToCIEXYZ(tc.r, tc.g, tc.b)
-		r, g, b := ciexyzToRGB(x, y, z)
+		r, g, b := cieXYZToRGB(x, y, z)
 		// If every component is within 0x0001 of wanted, that's close enough.
 		if !(ueq(r, tc.r) && ueq(g, tc.g) && ueq(b, tc.b)) {
 			t.Errorf(

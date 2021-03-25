@@ -12,30 +12,27 @@ import (
 
 type CIEXYZ struct {
 	X, Y, Z float64
+	// TODO consider also storing alpha, as a "pass-through" value.
 }
-
-// Conform to color.Color interface.
 
 // Get a CIE XYZ color as RGBA.  This assumes
 // sRGB ("Standard" RGB).
 func (c CIEXYZ) RGBA() (r, g, b, a uint32) {
-	r, g, b = ciexyzToRGB(c.X, c.Y, c.Z)
+	r, g, b = cieXYZToRGB(c.X, c.Y, c.Z)
 	a = 0xffff
 	return
 }
 
-// Conform to color.ColorModel:
-func ciexyzModel(c color.Color) color.Color {
+func cieXYZModel(c color.Color) color.Color {
 	if _, ok := c.(CIEXYZ); ok {
 		return c
 	}
-	// TODO consider also storing alpha, as a "pass-through" value.
 	r, g, b, _ := c.RGBA()
 	x, y, z := rgbToCIEXYZ(r, g, b)
 	return CIEXYZ{X: x, Y: y, Z: z}
 }
 
-var CIEXYZModel color.Model = color.ModelFunc(ciexyzModel)
+var CIEXYZModel color.Model = color.ModelFunc(cieXYZModel)
 
 // For the conversion used here see
 // https://en.wikipedia.org/wiki/SRGB
@@ -76,7 +73,7 @@ func gammaCompressed(u float64) float64 {
 	return result
 }
 
-func ciexyzToRGB(x, y, z float64) (r, g, b uint32) {
+func cieXYZToRGB(x, y, z float64) (r, g, b uint32) {
 	nr := 3.24096994*x + -1.53738318*y + -0.49861076*z
 	ng := -0.96924364*x + 1.8759675*y + 0.04155506*z
 	nb := 0.05563008*x + -0.20397696*y + 1.05697151*z
