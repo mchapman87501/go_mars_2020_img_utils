@@ -4,7 +4,7 @@ import (
 	"image"
 	"image/draw"
 
-	hsv_image "com.dmoonc/mchapman87501/mars_2020_img_utils/lib/image"
+	mars_lib_image "com.dmoonc/mchapman87501/mars_2020_img_utils/lib/image"
 )
 
 // Compositor builds a composite image from constituent tile
@@ -12,14 +12,14 @@ import (
 type Compositor struct {
 	Bounds     image.Rectangle
 	addedAreas []image.Rectangle
-	Result     *hsv_image.HSV
+	Result     *mars_lib_image.CIELab
 }
 
 func NewCompositor(rect image.Rectangle) Compositor {
 	return Compositor{
 		rect,
 		[]image.Rectangle{},
-		hsv_image.NewHSV(rect),
+		mars_lib_image.NewCIELab(rect),
 	}
 }
 
@@ -36,11 +36,11 @@ type chanAdjustmentMap map[float64]float64
 type cntMap map[float64]float64
 
 type adjustmentMap struct {
-	H, S, V chanAdjustmentMap
+	L, A, B chanAdjustmentMap
 }
 
-func (comp *Compositor) matchColors(image image.Image, destRect image.Rectangle) image.Image {
-	result := hsv_image.HSVFromImage(image)
+func (comp *Compositor) matchColors(tileImage image.Image, destRect image.Rectangle) image.Image {
+	result := mars_lib_image.CIELabFromImage(tileImage)
 
 	adjustments := comp.makeValueAdjustmentMap(result, destRect)
 	adjustColors(result, adjustments)
@@ -48,20 +48,20 @@ func (comp *Compositor) matchColors(image image.Image, destRect image.Rectangle)
 	return result
 }
 
-func (comp *Compositor) makeValueAdjustmentMap(hsvImage *hsv_image.HSV, destRect image.Rectangle) *adjustmentMap {
-	xTransform := destRect.Min.X - hsvImage.Bounds().Min.X
-	yTransform := destRect.Min.Y - hsvImage.Bounds().Min.Y
+func (comp *Compositor) makeValueAdjustmentMap(tileImage *mars_lib_image.CIELab, destRect image.Rectangle) *adjustmentMap {
+	xTransform := destRect.Min.X - tileImage.Bounds().Min.X
+	yTransform := destRect.Min.Y - tileImage.Bounds().Min.Y
 
 	// Build an adjustment mapping, for all overlapping addedAreas, that
 	// maps from result's pixel V channel to that of the corresponding
 	// comp.Result pixel.
-	h := make(chanAdjustmentMap)
-	s := make(chanAdjustmentMap)
-	v := make(chanAdjustmentMap)
+	labL := make(chanAdjustmentMap)
+	laba := make(chanAdjustmentMap)
+	labb := make(chanAdjustmentMap)
 
-	hCounts := make(cntMap)
-	sCounts := make(cntMap)
-	vCounts := make(cntMap)
+	lCounts := make(cntMap)
+	aCounts := make(cntMap)
+	bCounts := make(cntMap)
 
 	for _, rect := range comp.addedAreas {
 		overlap := rect.Intersect(destRect)
@@ -70,21 +70,21 @@ func (comp *Compositor) makeValueAdjustmentMap(hsvImage *hsv_image.HSV, destRect
 			// Need to convert coords.
 			for x := overlap.Min.X; x < overlap.Max.X; x++ {
 				for y := overlap.Min.Y; y < overlap.Max.Y; y++ {
-					targetPix := comp.Result.HSVAt(x, y)
-					srcPix := hsvImage.HSVAt(x-xTransform, y-yTransform)
+					targetPix := comp.Result.CIELabAt(x, y)
+					srcPix := tileImage.CIELabAt(x-xTransform, y-yTransform)
 
 					// Multiple srcPix-els may have the same V channel value,
 					// and each one may map to a different targetPix V
 					// channel value.
 					// Use the average: sum
 					// all mappings, then divide by the number of mappings.
-					h[srcPix.H] += targetPix.H
-					s[srcPix.S] += targetPix.S
-					v[srcPix.V] += targetPix.V
+					labL[srcPix.L] += targetPix.L
+					laba[srcPix.A] += targetPix.A
+					labb[srcPix.B] += targetPix.B
 
-					hCounts[srcPix.H] += 1
-					sCounts[srcPix.S] += 1
-					vCounts[srcPix.V] += 1
+					lCounts[srcPix.L] += 1
+					aCounts[srcPix.A] += 1
+					bCounts[srcPix.B] += 1
 				}
 			}
 		}
@@ -92,21 +92,21 @@ func (comp *Compositor) makeValueAdjustmentMap(hsvImage *hsv_image.HSV, destRect
 
 	// Overlapping regions may not cover the full gamut of channel values.
 	// Add a default 1:1 mapping for extreme values, to aid interpolation.
-	addExtrema(h, hCounts)
-	addExtrema(s, sCounts)
-	addExtrema(v, vCounts)
+	addExtrema(labL, lCounts, 0.0, 100.0)
+	addExtrema(laba, aCounts, -128.0, 127.0)
+	addExtrema(labb, bCounts, -128.0, 127.0)
 
-	normalizeCAM(h, hCounts)
-	normalizeCAM(s, sCounts)
-	normalizeCAM(v, vCounts)
+	normalizeCAM(labL, lCounts)
+	normalizeCAM(laba, aCounts)
+	normalizeCAM(labb, bCounts)
 
-	return &adjustmentMap{H: h, S: s, V: v}
+	return &adjustmentMap{L: labL, A: laba, B: labb}
 }
 
-func addExtrema(cam chanAdjustmentMap, counts cntMap) {
+func addExtrema(cam chanAdjustmentMap, counts cntMap, minVal, maxVal float64) {
 	// Overlapping regions may not cover the full gamut of channel values.
 	// Add a default 1:1 mapping for extreme values, to aid interpolation.
-	extrema := []float64{0.0, 1.0}
+	extrema := []float64{minVal, maxVal}
 	for _, v := range extrema {
 		_, ok := cam[v]
 		if !ok {
@@ -122,43 +122,18 @@ func normalizeCAM(cam chanAdjustmentMap, counts cntMap) {
 	}
 }
 
-func adjustColors(hsvImage *hsv_image.HSV, adjustments *adjustmentMap) {
-	hInterp := NewFloat64Interpolator(adjustments.H)
-	sInterp := NewFloat64Interpolator(adjustments.S)
-	vInterp := NewFloat64Interpolator(adjustments.V)
+func adjustColors(image *mars_lib_image.CIELab, adjustments *adjustmentMap) {
+	hInterp := NewFloat64Interpolator(adjustments.L)
+	sInterp := NewFloat64Interpolator(adjustments.A)
+	vInterp := NewFloat64Interpolator(adjustments.B)
 
-	for y := hsvImage.Bounds().Min.Y; y < hsvImage.Bounds().Max.Y; y++ {
-		for x := hsvImage.Bounds().Min.X; x < hsvImage.Bounds().Max.X; x++ {
-			pix := hsvImage.HSVAt(x, y)
-			pix.H = hInterp.Interp(pix.H)
-			pix.S = sInterp.Interp(pix.S)
-			pix.V = vInterp.Interp(pix.V)
-			hsvImage.SetHSV(x, y, pix)
-		}
-	}
-}
-
-// Ensure the range of Value component values lies within 0.0 ... 1.0
-func (comp *Compositor) CompressDynamicRange() {
-	// I think this is completely un-necessary...
-	pixelStride := 3
-	minValue := 1.0
-	maxValue := 0.0
-	for i := 2; i < len(comp.Result.Pix); i += pixelStride {
-		currValue := comp.Result.Pix[i]
-		if minValue > currValue {
-			minValue = currValue
-		}
-		if maxValue < currValue {
-			maxValue = currValue
-		}
-	}
-
-	if (minValue < 0.0) || (maxValue > 1.0) {
-		dValue := maxValue - minValue
-		scale := 1.0 / dValue
-		for i := 2; i < len(comp.Result.Pix); i += pixelStride {
-			comp.Result.Pix[i] = (comp.Result.Pix[i] - minValue) * scale
+	for y := image.Bounds().Min.Y; y < image.Bounds().Max.Y; y++ {
+		for x := image.Bounds().Min.X; x < image.Bounds().Max.X; x++ {
+			pix := image.CIELabAt(x, y)
+			pix.L = hInterp.Interp(pix.L)
+			pix.A = sInterp.Interp(pix.A)
+			pix.B = vInterp.Interp(pix.B)
+			image.SetCIELab(x, y, pix)
 		}
 	}
 }

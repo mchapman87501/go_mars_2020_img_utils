@@ -37,8 +37,14 @@ func demosaiced(cache lib.ImageCache, record lib.CompositeImageInfo) (image.Imag
 	return image, nil
 }
 
+func saveMetadata(records lib.CompositeImageSet, filename string) {
+	// TBD
+}
+
 func assembleImageSet(cache lib.ImageCache, imageSet lib.CompositeImageSet) {
 	filename := outDir + imageSet.Name() + ".png"
+	metadataFilename := outDir + imageSet.Name() + "_info.json"
+
 	fmt.Println("Processing", filename)
 
 	if len(imageSet) < 2 {
@@ -69,8 +75,9 @@ func assembleImageSet(cache lib.ImageCache, imageSet lib.CompositeImageSet) {
 			compositor.AddImage(image, record.SubframeRect)
 		}
 	}
-	compositor.CompressDynamicRange()
 	savePNG(compositor.Result, filename)
+
+	saveMetadata(sorted, metadataFilename)
 }
 
 func assembleImageSets(imageDB lib.ImageDB, imageSets []lib.CompositeImageSet) {

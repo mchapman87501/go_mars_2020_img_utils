@@ -1,6 +1,7 @@
 package color
 
 import (
+	"fmt"
 	"image/color"
 	"math"
 )
@@ -83,8 +84,20 @@ func cieXYZToRGB(x, y, z float64) (r, g, b uint32) {
 	gb := gammaCompressed(nb)
 	// fmt.Printf("xyztorgb(%v, %v, %v) -> (%v, %v, %v) -> (%v, %v, %v)\n", x, y, z, nr, ng, nb, gr, gg, gb)
 
-	r = denorm(gr)
-	g = denorm(gg)
-	b = denorm(gb)
+	r = denorm(clip(gr))
+	g = denorm(clip(gg))
+	b = denorm(clip(gb))
 	return
+}
+
+func clip(rgbComp float64) float64 {
+	if rgbComp < 0.0 {
+		fmt.Println("OOG < 0:", rgbComp)
+		return 0.0
+	}
+	if rgbComp > 1.0 {
+		fmt.Println("OOG > 1:", rgbComp)
+		return 1.0
+	}
+	return rgbComp
 }
