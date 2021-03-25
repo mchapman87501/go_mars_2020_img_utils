@@ -5,6 +5,29 @@ import (
 	"math"
 )
 
+type HSV struct {
+	H, S, V float64 // TODO consider a fixed-point repr, e.g., int32
+}
+
+// Conform to color.Color interface:
+func (c HSV) RGBA() (r, g, b, a uint32) {
+	r, g, b = hsvToRGB(c.H, c.S, c.V)
+	a = 0xffff
+	return
+}
+
+// Conform to color.ColorModel:
+func hsvModel(c color.Color) color.Color {
+	if _, ok := c.(HSV); ok {
+		return c
+	}
+	r, g, b, _ := c.RGBA()
+	h, s, v := rgbToHSV(r, g, b)
+	return HSV{h, s, v}
+}
+
+var HSVModel color.Model = color.ModelFunc(hsvModel)
+
 func max(v ...float64) float64 {
 	if len(v) <= 0 {
 		return 0.0 // Should return an error?
@@ -65,7 +88,7 @@ func rgbToHue(rn, gn, bn, minComp, maxComp float64) float64 {
 
 // Convert "normalized" RGB, with all components in 0.0 ... 1.0, to HSV.
 // Returns values in the range 0.0 ... 1.0
-func NormRGBToHSV(rn, gn, bn float64) (float64, float64, float64) {
+func normRGBToHSV(rn, gn, bn float64) (float64, float64, float64) {
 	// This derives from Wikipedia.
 	maxComp := max(rn, gn, bn)
 	minComp := min(rn, gn, bn)
@@ -81,14 +104,14 @@ func NormRGBToHSV(rn, gn, bn float64) (float64, float64, float64) {
 
 // Convert RGB color to HSV.
 // Returns values in the range 0.0 ... 1.0
-func RGBToHSV(r, g, b uint32) (float64, float64, float64) {
-	return NormRGBToHSV(norm(r), norm(g), norm(b))
+func rgbToHSV(r, g, b uint32) (float64, float64, float64) {
+	return normRGBToHSV(norm(r), norm(g), norm(b))
 }
 
 // Convert HSV color to "normalized" RGB,
 // with each result color component in 0.0 ... 1.0
 // Round-trip RGB->HSV->RGB does not always succeed.
-func HSVToNormRGB(h, s, v float64) (float64, float64, float64) {
+func hsvToNormRGB(h, s, v float64) (float64, float64, float64) {
 	if s == 0 {
 		return v, v, v
 	}
@@ -134,30 +157,7 @@ func HSVToNormRGB(h, s, v float64) (float64, float64, float64) {
 // Despite being uint32, the returned values are each in 0 ... 0xffff
 // I think this matches the expected behavior for Go's image/color code.
 // The algorithm is from Python's colorsys.
-func HSVToRGB(h, s, v float64) (uint32, uint32, uint32) {
-	rn, gn, bn := HSVToNormRGB(h, s, v)
+func hsvToRGB(h, s, v float64) (uint32, uint32, uint32) {
+	rn, gn, bn := hsvToNormRGB(h, s, v)
 	return denorm(rn), denorm(gn), denorm(bn)
 }
-
-type HSV struct {
-	H, S, V float64 // TODO consider a fixed-point repr, e.g., int32
-}
-
-// Conform to color.Color interface:
-func (c HSV) RGBA() (r, g, b, a uint32) {
-	r, g, b = HSVToRGB(c.H, c.S, c.V)
-	a = 0xffff
-	return
-}
-
-// Conform to color.ColorModel:
-func hsvModel(c color.Color) color.Color {
-	if _, ok := c.(HSV); ok {
-		return c
-	}
-	r, g, b, _ := c.RGBA()
-	h, s, v := RGBToHSV(r, g, b)
-	return HSV{h, s, v}
-}
-
-var HSVModel color.Model = color.ModelFunc(hsvModel)
