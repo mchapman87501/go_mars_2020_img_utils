@@ -4,7 +4,7 @@ import (
 	"image"
 	"image/draw"
 
-	mars_lib_image "com.dmoonc/mchapman87501/mars_2020_img_utils/lib/image"
+	lib_image "com.dmoonc/mchapman87501/mars_2020_img_utils/lib/image"
 )
 
 // Compositor builds a composite image from constituent tile
@@ -12,14 +12,14 @@ import (
 type Compositor struct {
 	Bounds     image.Rectangle
 	addedAreas []image.Rectangle
-	Result     *mars_lib_image.CIELab
+	Result     *lib_image.CIELab
 }
 
 func NewCompositor(rect image.Rectangle) Compositor {
 	return Compositor{
 		rect,
 		[]image.Rectangle{},
-		mars_lib_image.NewCIELab(rect),
+		lib_image.NewCIELab(rect),
 	}
 }
 
@@ -40,7 +40,7 @@ type adjustmentMap struct {
 }
 
 func (comp *Compositor) matchColors(tileImage image.Image, destRect image.Rectangle) image.Image {
-	result := mars_lib_image.CIELabFromImage(tileImage)
+	result := lib_image.CIELabFromImage(tileImage)
 
 	adjustments := comp.makeValueAdjustmentMap(result, destRect)
 	adjustColors(result, adjustments)
@@ -48,7 +48,7 @@ func (comp *Compositor) matchColors(tileImage image.Image, destRect image.Rectan
 	return result
 }
 
-func (comp *Compositor) makeValueAdjustmentMap(tileImage *mars_lib_image.CIELab, destRect image.Rectangle) *adjustmentMap {
+func (comp *Compositor) makeValueAdjustmentMap(tileImage *lib_image.CIELab, destRect image.Rectangle) *adjustmentMap {
 	xTransform := destRect.Min.X - tileImage.Bounds().Min.X
 	yTransform := destRect.Min.Y - tileImage.Bounds().Min.Y
 
@@ -122,18 +122,160 @@ func normalizeCAM(cam chanAdjustmentMap, counts cntMap) {
 	}
 }
 
-func adjustColors(image *mars_lib_image.CIELab, adjustments *adjustmentMap) {
-	hInterp := NewFloat64Interpolator(adjustments.L)
-	sInterp := NewFloat64Interpolator(adjustments.A)
-	vInterp := NewFloat64Interpolator(adjustments.B)
+func adjustColors(image *lib_image.CIELab, adjustments *adjustmentMap) {
+	lInterp := NewFloat64Interpolator(adjustments.L)
+	aInterp := NewFloat64Interpolator(adjustments.A)
+	bInterp := NewFloat64Interpolator(adjustments.B)
 
 	for y := image.Bounds().Min.Y; y < image.Bounds().Max.Y; y++ {
 		for x := image.Bounds().Min.X; x < image.Bounds().Max.X; x++ {
 			pix := image.CIELabAt(x, y)
-			pix.L = hInterp.Interp(pix.L)
-			pix.A = sInterp.Interp(pix.A)
-			pix.B = vInterp.Interp(pix.B)
+			pix.L = lInterp.Interp(pix.L)
+			pix.A = aInterp.Interp(pix.A)
+			pix.B = bInterp.Interp(pix.B)
 			image.SetCIELab(x, y, pix)
 		}
 	}
 }
+
+// Try to "enhance" the result image.  This may mean adjusting L histograms,
+// etc.
+func (comp *Compositor) AutoEnhance() {
+
+}
+
+// Compress the dynamic range of the result image to make it more likely that
+// it will fit within the sRGB color gamut.
+// sRGB bounding cube, from image/color/print_srgb_gamut.py, is roughly
+// {'labL': [0.0, 99.99998453333127], 'laba': [-86.1829494051608, 98.23532017664644], 'labb': [-107.86546414496824, 94.47731817969378]}
+
+// type LabBounds struct {
+// 	Min lib_color.CIELab
+// 	Max lib_color.CIELab
+// }
+
+// func (comp *Compositor) CompressDynamicRange() {
+// compressAsNeeded(getDynamicRange(comp.Result), comp.Result)
+// }
+
+// func getDynamicRange(image *lib_image.CIELab) LabBounds {
+// 	min := lib_color.CIELab{100.0, 127.0, 127.0}
+// 	max := lib_color.CIELab{0.0, -128.0, -128.0}
+
+// 	for y := image.Bounds().Min.Y; y < image.Bounds().Max.Y; y++ {
+// 		for x := image.Bounds().Min.X; x < image.Bounds().Max.X; x++ {
+// 			pix := image.CIELabAt(x, y)
+
+// 			if pix.L > max.L {
+// 				max.L = pix.L
+// 			}
+// 			if pix.L < min.L {
+// 				min.L = pix.L
+// 			}
+
+// 			if pix.A > max.A {
+// 				max.A = pix.A
+// 			}
+// 			if pix.A < min.A {
+// 				min.A = pix.A
+// 			}
+
+// 			if pix.B > max.B {
+// 				max.B = pix.B
+// 			}
+// 			if pix.B < min.B {
+// 				min.B = pix.B
+// 			}
+// 		}
+// 	}
+
+// 	return LabBounds{Min: min, Max: max}
+// }
+
+// type channelGetter func(p lib_color.CIELab) float64
+// type channelSetter func(p lib_color.CIELab, v float64)
+
+// type scaler struct {
+// 	MinIn, MinOut, Scale float64
+
+// 	getChan channelGetter
+// 	setChan channelSetter
+// }
+
+// func newScaler(
+// 	minIn, minOut, maxIn, maxOut float64,
+// 	getChan channelGetter, setChan channelSetter) scaler {
+// 	// Is the input already in bounds?
+// 	if (minIn >= minOut) && (maxIn <= maxOut) {
+// 		return scaler{minIn, minIn, 1.0, nil, nil}
+// 	}
+
+// 	dIn := maxIn - minIn
+// 	dOut := maxOut - minOut
+// 	if dIn <= 0.0 {
+// 		return scaler{minIn, minIn, 1.0, nil, nil}
+// 	}
+
+// 	scale := dOut / dIn
+// 	return scaler{minIn, minOut, scale, getChan, setChan}
+// }
+
+// func (s *scaler) UpdatePix(p lib_color.CIELab) {
+// 	v := s.getChan(p)
+// 	vNew := (v-s.MinIn)*s.Scale + s.MinOut
+// 	s.setChan(p, vNew)
+// }
+
+// func (s *scaler) isIdentity() bool {
+// 	dMin := math.Abs(s.MinOut - s.MinIn)
+
+// 	return (dMin <= 1.0e-6) && (math.Abs(s.Scale-1.0) <= 1.0e-6)
+// }
+
+// func compressAsNeeded(imageRange LabBounds, image *lib_image.CIELab) {
+// fmt.Println("Image band ranges:", imageRange)
+// // {'labL': [0.0, 99.99998453333127], 'laba': [-86.1829494051608, 98.23532017664644], 'labb': [-107.86546414496824, 94.47731817969378]}
+// minRGB := lib_color.CIELab{L: 0.0, A: -86.0, B: -107.0}
+// maxRGB := lib_color.CIELab{L: 100.0, A: 98.0, B: 94.0}
+
+// scalers := []scaler{}
+
+// // getL := func(p lib_color.CIELab) float64 { return p.L }
+// // setL := func(p lib_color.CIELab, v float64) { p.L = v }
+// // lScaler := newScaler(imageRange.Min.L, minRGB.L, imageRange.Max.L, maxRGB.L, getL, setL)
+// // if !lScaler.isIdentity() {
+// // 	fmt.Println("Compress Lab L")
+// // 	scalers = append(scalers, lScaler)
+// // }
+
+// getA := func(p lib_color.CIELab) float64 { return p.A }
+// setA := func(p lib_color.CIELab, v float64) { p.A = v }
+// aScaler := newScaler(imageRange.Min.A, minRGB.A, imageRange.Max.A, maxRGB.A, getA, setA)
+// if !aScaler.isIdentity() {
+// 	fmt.Println("Compress Lab a")
+// 	scalers = append(scalers, aScaler)
+// }
+
+// getB := func(p lib_color.CIELab) float64 { return p.B }
+// setB := func(p lib_color.CIELab, v float64) { p.B = v }
+// bScaler := newScaler(imageRange.Min.B, minRGB.B, imageRange.Max.B, maxRGB.B, getB, setB)
+// if !bScaler.isIdentity() {
+// 	fmt.Println("Compress Lab a")
+// 	scalers = append(scalers, bScaler)
+// }
+// compressChannels(image, scalers)
+// }
+
+// func compressChannels(image *lib_image.CIELab, scalers []scaler) {
+// 	if len(scalers) > 0 {
+// 		for y := image.Bounds().Min.Y; y < image.Bounds().Max.Y; y++ {
+// 			for x := image.Bounds().Min.X; x < image.Bounds().Max.X; x++ {
+// 				pix := image.CIELabAt(x, y)
+// 				for _, s := range scalers {
+// 					s.UpdatePix(pix)
+// 				}
+// 				image.SetCIELab(x, y, pix)
+// 			}
+// 		}
+// 	}
+// }

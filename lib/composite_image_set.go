@@ -108,11 +108,11 @@ func (cid CompositeImageSet) Swap(i, j int) {
 func (cid CompositeImageSet) Less(i, j int) bool {
 	imin := cid[i].SubframeRect.Min
 	jmin := cid[j].SubframeRect.Min
-	if imin.Y < jmin.Y {
+	if imin.X < jmin.X {
 		return true
 	}
-	if imin.Y == jmin.Y {
-		return imin.X < jmin.X
+	if imin.X == jmin.X {
+		return imin.Y < jmin.Y
 	}
 	return false
 }
