@@ -7,7 +7,9 @@ import (
 	"image/png"
 	"log"
 	"os"
+	"runtime"
 	"sort"
+	"sync"
 
 	"com.dmoonc/mchapman87501/mars_2020_img_utils/lib"
 )
@@ -61,10 +63,9 @@ func saveMetadata(records lib.CompositeImageSet, filename string) {
 }
 
 func assembleImageSet(cache lib.ImageCache, imageSet lib.CompositeImageSet) {
+	fmt.Println("Processing", imageSet.Name())
 	filename := outDir + imageSet.Name() + ".png"
 	metadataFilename := outDir + imageSet.Name() + "_metadata.json"
-
-	fmt.Println("Processing", filename)
 
 	if len(imageSet) < 2 {
 		fmt.Println("Image set does not contain multiple images.")
@@ -90,21 +91,36 @@ func assembleImageSet(cache lib.ImageCache, imageSet lib.CompositeImageSet) {
 		if err != nil {
 			fmt.Println("Error retrieving full size image", record.ImageID, "- skipping")
 		} else {
-			fmt.Println("    Add", record.ImageID)
 			compositor.AddImage(image, record.SubframeRect)
 		}
 	}
-	savePNG(compositor.Result, filename)
 
+	compositor.AutoEnhance()
+	savePNG(compositor.Result, filename)
 	saveMetadata(sorted, metadataFilename)
 }
 
-func assembleImageSets(imageDB lib.ImageDB, imageSets []lib.CompositeImageSet) {
-	cache, err := lib.NewImageCache(imageDB)
+func enqueueCameraImageSets(
+	imageDB lib.ImageDB, camera string, jobs chan lib.CompositeImageSet,
+) {
+	imageSets, err := lib.GetCompositeImageSets(imageDB, camera)
 	if err != nil {
-		log.Fatal("Could not create image cache:", err)
+		fmt.Println("Error retrieving image sets for", camera, "-", err)
+	} else {
+		for _, imageSet := range imageSets {
+			jobs <- imageSet
+		}
 	}
-	for _, imageSet := range imageSets {
+
+}
+
+func processJobs(jobs chan lib.CompositeImageSet, cache lib.ImageCache, wg *sync.WaitGroup) {
+	for {
+		imageSet, ok := <-jobs
+		if !ok {
+			wg.Done()
+			return
+		}
 		assembleImageSet(cache, imageSet)
 	}
 }
@@ -120,14 +136,27 @@ func main() {
 		log.Fatal("Could not instantiate image DB:", err)
 	}
 
-	cameras := imageDB.Cameras()
-	for _, camera := range cameras {
-		fmt.Println("Finding composite image sets from", camera)
-		imageSets, err := lib.GetCompositeImageSets(imageDB, camera)
-		if err != nil {
-			fmt.Println("Error retrieving image sets for", camera, "-", err)
-		} else {
-			assembleImageSets(imageDB, imageSets)
-		}
+	// Lots of thread-safety issues here -- need to mutex access to
+	// cache operations.
+	cache, err := lib.NewImageCache(imageDB)
+	if err != nil {
+		log.Fatal("Could not instantiate image cache:", err)
 	}
+
+	cameras := imageDB.Cameras()
+	concurrency := runtime.NumCPU() * 3
+
+	wg := sync.WaitGroup{}
+	wg.Add(concurrency)
+	jobs := make(chan lib.CompositeImageSet, concurrency)
+	for i := 0; i < concurrency; i++ {
+		go func() {
+			processJobs(jobs, cache, &wg)
+		}()
+	}
+	for _, camera := range cameras {
+		enqueueCameraImageSets(imageDB, camera, jobs)
+	}
+	close(jobs)
+	wg.Wait()
 }
