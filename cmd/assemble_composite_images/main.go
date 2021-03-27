@@ -114,7 +114,7 @@ func enqueueCameraImageSets(
 
 }
 
-func processJobs(jobs chan lib.CompositeImageSet, cache lib.ImageCache, wg *sync.WaitGroup) {
+func processJobs(workerID int, jobs chan lib.CompositeImageSet, cache lib.ImageCache, wg *sync.WaitGroup) {
 	for {
 		imageSet, ok := <-jobs
 		if !ok {
@@ -144,15 +144,15 @@ func main() {
 	}
 
 	cameras := imageDB.Cameras()
-	concurrency := runtime.NumCPU() * 3
+	concurrency := runtime.NumCPU()
 
 	wg := sync.WaitGroup{}
 	wg.Add(concurrency)
 	jobs := make(chan lib.CompositeImageSet, concurrency)
 	for i := 0; i < concurrency; i++ {
-		go func() {
-			processJobs(jobs, cache, &wg)
-		}()
+		go func(workerID int) {
+			processJobs(workerID, jobs, cache, &wg)
+		}(i)
 	}
 	for _, camera := range cameras {
 		enqueueCameraImageSets(imageDB, camera, jobs)
