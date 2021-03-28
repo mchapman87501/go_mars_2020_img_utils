@@ -408,7 +408,7 @@ func TestRGBToHSVRoundTrip(t *testing.T) {
 		dg := gf - g0
 		db := bf - b0
 		distSqr := dr*dr + dg*dg + dg*db
-		return distSqr <= 2
+		return distSqr <= 3
 	}
 
 	for intensity := uint32(0); intensity <= 0xff; intensity++ {
@@ -431,6 +431,14 @@ func TestRGBToHSVRoundTrip(t *testing.T) {
 }
 
 func TestNormRGBToHSVRoundTrip(t *testing.T) {
+	closeEnough := func(r0, g0, b0, rf, gf, bf float64) bool {
+		dr := rf - r0
+		dg := gf - g0
+		db := bf - b0
+		distSqr := dr*dr + dg*dg + dg*db
+		return distSqr <= 1.0e-15
+	}
+
 	for intensity := 0.0; intensity <= 1.0; intensity += 0.10 {
 		red := intensity + (50.0 / 255.0)
 		if red > 1.0 {
@@ -441,7 +449,7 @@ func TestNormRGBToHSVRoundTrip(t *testing.T) {
 
 		h, s, v := normRGBToHSV(red, green, blue)
 		r, g, b := hsvToNormRGB(h, s, v)
-		if !(eq(r, red) && eq(g, green) && eq(b, blue)) {
+		if !closeEnough(red, green, blue, r, g, b) {
 			t.Errorf(
 				"Norm round-trip failed: (%v, %v, %v) -> (%v, %v, %v) -> (%v, %v, %v)",
 				red, green, blue, h, s, v, r, g, b)
