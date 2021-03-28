@@ -62,9 +62,27 @@ func saveMetadata(records lib.CompositeImageSet, filename string) {
 	}
 }
 
+func fileExists(pathname string) bool {
+	_, err := os.Stat(pathname)
+	if err == nil {
+		return true
+	}
+	if os.IsNotExist(err) {
+		return false
+	}
+	// Something else could be amiss here.
+	return false
+}
+
 func assembleImageSet(cache lib.ImageCache, imageSet lib.CompositeImageSet) {
-	fmt.Println("Processing", imageSet.Name())
 	filename := outDir + imageSet.Name() + ".png"
+	// If the file already exists, just move on, eh.
+	if fileExists(filename) {
+		fmt.Println(filename, "already exists; nothing to do.")
+		return
+	}
+	fmt.Println("Processing", imageSet.Name())
+
 	metadataFilename := outDir + imageSet.Name() + "_metadata.json"
 
 	if len(imageSet) < 2 {
