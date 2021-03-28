@@ -68,4 +68,6 @@ func TestCompositorSingleOverlap(t *testing.T) {
 	}
 
 	savePNG(compositor.Result, fmt.Sprintf("%s/single_overlap.png", outDir), t)
+	fmt.Println("This is a manual 'test'.")
+	fmt.Println("Review files in", outDir, "for correctness.")
 }

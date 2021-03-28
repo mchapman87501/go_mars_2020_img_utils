@@ -95,7 +95,7 @@ func assembleImageSet(cache lib.ImageCache, imageSet lib.CompositeImageSet) {
 		}
 	}
 
-	compositor.AutoEnhance()
+	compositor.CompressDynamicRange()
 	savePNG(compositor.Result, filename)
 	saveMetadata(sorted, metadataFilename)
 }

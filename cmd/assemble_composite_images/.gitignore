@@ -1,4 +1,5 @@
 composite_images/
+tile_images/
 mars_*.db
 image_cache
 assemble_composite_images

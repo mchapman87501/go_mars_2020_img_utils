@@ -22,6 +22,9 @@ func NewFloat64Interpolator(yVals map[float64]float64) *Float64Interpolator {
 }
 
 func (interp *Float64Interpolator) Interp(x float64) float64 {
+	if len(interp.xVals) <= 0 {
+		return x
+	}
 	xPrev, xNext := interp.bisectLeft(x)
 	xOffset := x - xPrev
 	fract := xOffset / (xNext - xPrev)

@@ -5,7 +5,7 @@ import (
 	"math"
 )
 
-// CIELab representss the CIE L*a*b* colorspace, 2° observer, D65 illuminant.
+// CIELab represents the CIE L*a*b* colorspace, 2° observer, D65 illuminant.
 // See https://en.wikipedia.org/wiki/CIELAB_color_space#Forward_transformation
 // Apologies for the uppercase member names ;)
 type CIELab struct {
