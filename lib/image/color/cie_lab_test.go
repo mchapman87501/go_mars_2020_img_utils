@@ -86,23 +86,22 @@ var rgbToLabTestCases = []struct {
 
 func TestRGBToLab(t *testing.T) {
 	for _, tc := range rgbToLabTestCases {
-		labL, laba, labb := rgbToCIELab(tc.r, tc.g, tc.b)
+		name := hexTupleStr(tc.r, tc.g, tc.b)
+		t.Run(name, func(t *testing.T) {
+			labL, laba, labb := rgbToCIELab(tc.r, tc.g, tc.b)
 
-		// Since I haven't written tests for DeltaECIE2000, this is pretty
-		// worthless.
-		gotLab := CIELab{labL, laba, labb}
-		wantLab := CIELab{tc.labL, tc.laba, tc.labb}
-		dE := DeltaECIE2000(gotLab, wantLab)
-		// Is the difference greater than the smallest human-noticeable difference?
-		if dE >= 2.3 {
-			t.Errorf(
-				"rgbToCIELab%v: want %v, got %v",
-				hexTupleStr(tc.r, tc.g, tc.b),
-				fTupleStr(tc.labL, tc.laba, tc.labb),
-				fTupleStr(labL, laba, labb))
-			// } else {
-			// 	fmt.Println("Δe:", dE)
-		}
+			// Since I haven't written tests for DeltaECIE2000, this is pretty
+			// worthless.
+			gotLab := CIELab{labL, laba, labb}
+			wantLab := CIELab{tc.labL, tc.laba, tc.labb}
+			dE := DeltaECIE2000(gotLab, wantLab)
+			// Is the difference greater than the smallest human-noticeable difference?
+			if dE >= 2.3 {
+				t.Errorf("want %v, got %v",
+					fTupleStr(tc.labL, tc.laba, tc.labb),
+					fTupleStr(labL, laba, labb))
+			}
+		})
 	}
 }
 
@@ -173,14 +172,16 @@ var labToRGBTestCases = []struct {
 
 func TestLabToRGB(t *testing.T) {
 	for _, tc := range labToRGBTestCases {
-		r, g, b := cieLabToRGB(tc.labL, tc.laba, tc.labb)
+		name := fTupleStr(tc.labL, tc.laba, tc.labb)
+		t.Run(name, func(t *testing.T) {
+			r, g, b := cieLabToRGB(tc.labL, tc.laba, tc.labb)
 
-		if !(eq_u(r, tc.r) && eq_u(g, tc.g) && eq_u(b, tc.b)) {
-			t.Errorf(
-				"cieLabToRGB%v: want %v, got %v",
-				fTupleStr(tc.labL, tc.laba, tc.labb),
-				hexTupleStr(tc.r, tc.g, tc.b),
-				hexTupleStr(r, g, b))
-		}
+			if !(eq_u(r, tc.r) && eq_u(g, tc.g) && eq_u(b, tc.b)) {
+				t.Errorf(
+					"want %v, got %v",
+					hexTupleStr(tc.r, tc.g, tc.b),
+					hexTupleStr(r, g, b))
+			}
+		})
 	}
 }

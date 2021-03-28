@@ -7,7 +7,7 @@ import (
 )
 
 func tupleStr(valueStrs []string) string {
-	return "(" + strings.Join(valueStrs, ", ") + ")"
+	return "(" + strings.Join(valueStrs, ",") + ")"
 }
 
 func fTupleStr(values ...float64) string {
@@ -100,14 +100,16 @@ var xyzTestCases = []struct {
 
 func TestRGBToXYZ(t *testing.T) {
 	for _, tc := range xyzTestCases {
-		x, y, z := rgbToCIEXYZ(tc.r, tc.g, tc.b)
-		if !(eq(x, tc.x) && eq(y, tc.y) && eq(z, tc.z)) {
-			t.Errorf(
-				"rgbToCIEXYZ%v: want %v, got %v",
-				hexTupleStr(tc.r, tc.g, tc.b),
-				fTupleStr(tc.x, tc.y, tc.z),
-				fTupleStr(x, y, z))
-		}
+		name := hexTupleStr(tc.r, tc.g, tc.b)
+		t.Run(name, func(t *testing.T) {
+			x, y, z := rgbToCIEXYZ(tc.r, tc.g, tc.b)
+			if !(eq(x, tc.x) && eq(y, tc.y) && eq(z, tc.z)) {
+				t.Errorf(
+					"want %v, got %v",
+					fTupleStr(tc.x, tc.y, tc.z),
+					fTupleStr(x, y, z))
+			}
+		})
 	}
 }
 
@@ -130,14 +132,15 @@ func eq_u(a, b uint32) bool {
 
 func TestRGBToXYZToRGB(t *testing.T) {
 	for _, tc := range xyzTestCases {
-		x, y, z := rgbToCIEXYZ(tc.r, tc.g, tc.b)
-		r, g, b := cieXYZToRGB(x, y, z)
-		// If every component is within 0x0001 of wanted, that's close enough.
-		if !(eq_u(r, tc.r) && eq_u(g, tc.g) && eq_u(b, tc.b)) {
-			t.Errorf(
-				"rgbxyz round trip %v: got %v",
-				hexTupleStr(tc.r, tc.g, tc.b),
-				hexTupleStr(r, g, b))
-		}
+		name := hexTupleStr(tc.r, tc.g, tc.b)
+		t.Run(name, func(t *testing.T) {
+			x, y, z := rgbToCIEXYZ(tc.r, tc.g, tc.b)
+			r, g, b := cieXYZToRGB(x, y, z)
+			// If every component is within 0x0001 of wanted, that's close enough.
+			if !(eq_u(r, tc.r) && eq_u(g, tc.g) && eq_u(b, tc.b)) {
+				t.Errorf(
+					"round trip got %v", hexTupleStr(r, g, b))
+			}
+		})
 	}
 }
