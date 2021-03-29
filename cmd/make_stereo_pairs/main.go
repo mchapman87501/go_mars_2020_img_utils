@@ -140,8 +140,10 @@ func makeImage(imageDB lib.ImageDB, sp StereoPair) (image.Image, error) {
 		return nil, fmt.Errorf("can't retrieve image %v: %v", sp.Right, err)
 	}
 
+	rightReExposed := lib.MatchExposure(rightImage, leftImage)
+
 	leftBounds := leftImage.Bounds()
-	rightBounds := rightImage.Bounds()
+	rightBounds := rightReExposed.Bounds()
 	if leftBounds.Dx() != rightBounds.Dx() {
 		return nil, fmt.Errorf("images have different widths: %v=%v, %v=%v", sp.Left, leftBounds.Dx(), sp.Right, rightBounds.Dx())
 	}
@@ -156,7 +158,7 @@ func makeImage(imageDB lib.ImageDB, sp StereoPair) (image.Image, error) {
 	leftRect := image.Rect(0, 0, leftBounds.Dx(), leftBounds.Dy())
 	draw.Src.Draw(result, leftRect, leftImage, leftBounds.Min)
 	rightRect := image.Rect(leftBounds.Dx()+1, 0, leftBounds.Dx()+1+rightBounds.Dx(), rightBounds.Dy())
-	draw.Src.Draw(result, rightRect, rightImage, rightBounds.Min)
+	draw.Src.Draw(result, rightRect, rightReExposed, rightBounds.Min)
 	return result, nil
 }
 
