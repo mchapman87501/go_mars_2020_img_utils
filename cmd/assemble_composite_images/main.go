@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"image"
-	"image/png"
 	"log"
 	"os"
 	"runtime"
@@ -17,16 +16,8 @@ import (
 const outDir = "composite_images/"
 
 func savePNG(image image.Image, filename string) {
-	outf, err := os.Create(filename)
-	if err != nil {
-		fmt.Printf("Error creating %v: %v\n", filename, err)
-		return
-	}
-	defer outf.Close()
-
-	err = png.Encode(outf, image)
-	if err != nil {
-		fmt.Printf("Error saving %v: %v\n", filename, err)
+	if err := lib.SavePNG(image, filename); err != nil {
+		fmt.Println("Error saving %v: %v\n", filename, err)
 	}
 }
 
