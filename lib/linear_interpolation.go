@@ -6,40 +6,57 @@ import (
 
 type Float64Interpolator struct {
 	// Mapping from known input values to known output values
-	yVals map[float64]float64
+	// Uses scaled input values
+	yVals map[int]float64
 	// Ordered keys from values:
-	xVals []float64
+	xVals []int
+}
+
+func toFixed(fval float64) int {
+	return int(fval * 1000000)
 }
 
 func NewFloat64Interpolator(yVals map[float64]float64) *Float64Interpolator {
-	var xVals []float64 = make([]float64, 0, len(yVals))
-	for k := range yVals {
-		xVals = append(xVals, k)
+	xVals := make([]int, 0, len(yVals))
+	myYVals := make(map[int]float64, len(yVals))
+	for k, v := range yVals {
+		fixed := toFixed(k)
+		xVals = append(xVals, fixed)
+		myYVals[fixed] = v
 	}
-	sort.Float64s(xVals)
+	sort.Ints(xVals)
 
-	return &Float64Interpolator{yVals: yVals, xVals: xVals}
+	return &Float64Interpolator{yVals: myYVals, xVals: xVals}
 }
 
 func (interp *Float64Interpolator) Interp(x float64) float64 {
 	if len(interp.xVals) <= 0 {
 		return x
 	}
-	xPrev, xNext := interp.bisectLeft(x)
-	xOffset := x - xPrev
-	fract := xOffset / (xNext - xPrev)
+	fixed := toFixed(x)
+	result, ok := interp.yVals[fixed]
+	if ok {
+		return result
+	}
+	xPrev, xNext := interp.bisectLeft(fixed)
+	xOffset := fixed - xPrev
+	fract := float64(xOffset) / float64(xNext-xPrev)
 	yPrev := interp.yVals[xPrev]
 	yNext := interp.yVals[xNext]
-	return yPrev + fract*(yNext-yPrev)
+
+	// Cache the new result.
+	result = yPrev + fract*(yNext-yPrev)
+	interp.yVals[fixed] = result
+	return result
 }
 
-func (interp *Float64Interpolator) bisectLeft(x float64) (xPrev, xNext float64) {
+func (interp *Float64Interpolator) bisectLeft(fixed int) (xPrev, xNext int) {
 	// This is derived from Python's bisect.py.
 	lo := 0
 	hi := len(interp.xVals)
 	for lo < hi {
-		mid := (lo + hi) / 2
-		if interp.xVals[mid] > x {
+		mid := int(lo+hi) / 2
+		if interp.xVals[mid] > fixed {
 			hi = mid
 		} else {
 			lo = mid + 1

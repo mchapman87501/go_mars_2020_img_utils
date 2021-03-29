@@ -88,7 +88,7 @@ func TestRGBToLab(t *testing.T) {
 	for _, tc := range rgbToLabTestCases {
 		name := hexTupleStr(tc.r, tc.g, tc.b)
 		t.Run(name, func(t *testing.T) {
-			labL, laba, labb := rgbToCIELab(tc.r, tc.g, tc.b)
+			labL, laba, labb := RGBToCIELab(tc.r, tc.g, tc.b)
 
 			// Since I haven't written tests for DeltaECIE2000, this is pretty
 			// worthless.

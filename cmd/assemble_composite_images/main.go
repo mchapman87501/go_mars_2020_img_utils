@@ -129,7 +129,6 @@ func enqueueCameraImageSets(
 			jobs <- imageSet
 		}
 	}
-
 }
 
 func processJobs(workerID int, jobs chan lib.CompositeImageSet, cache lib.ImageCache, wg *sync.WaitGroup) {
@@ -143,17 +142,7 @@ func processJobs(workerID int, jobs chan lib.CompositeImageSet, cache lib.ImageC
 	}
 }
 
-func main() {
-	err := os.MkdirAll(outDir, 0755)
-	if err != nil {
-		log.Fatal("Could not create output directory", outDir, ":", err)
-	}
-
-	imageDB, err := lib.NewImageDB()
-	if err != nil {
-		log.Fatal("Could not instantiate image DB:", err)
-	}
-
+func processConcurrently(imageDB lib.ImageDB, cameras []string) {
 	// Lots of thread-safety issues here -- need to mutex access to
 	// cache operations.
 	cache, err := lib.NewImageCache(imageDB)
@@ -161,7 +150,6 @@ func main() {
 		log.Fatal("Could not instantiate image cache:", err)
 	}
 
-	cameras := imageDB.Cameras()
 	concurrency := runtime.NumCPU()
 
 	wg := sync.WaitGroup{}
@@ -177,4 +165,18 @@ func main() {
 	}
 	close(jobs)
 	wg.Wait()
+}
+
+func main() {
+	err := os.MkdirAll(outDir, 0755)
+	if err != nil {
+		log.Fatal("Could not create output directory", outDir, ":", err)
+	}
+
+	imageDB, err := lib.NewImageDB()
+	if err != nil {
+		log.Fatal("Could not instantiate image DB:", err)
+	}
+
+	processConcurrently(imageDB, imageDB.Cameras())
 }

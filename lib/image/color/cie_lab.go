@@ -26,7 +26,7 @@ func cieLabModel(c color.Color) color.Color {
 		return c
 	}
 	r, g, b, _ := c.RGBA()
-	labL, laba, labb := rgbToCIELab(r, g, b)
+	labL, laba, labb := RGBToCIELab(r, g, b)
 	return CIELab{L: labL, A: laba, B: labb}
 }
 
@@ -38,7 +38,7 @@ func cieLabToRGB(labL, laba, labb float64) (r, g, b uint32) {
 	return
 }
 
-func rgbToCIELab(r, g, b uint32) (labL, laba, labb float64) {
+func RGBToCIELab(r, g, b uint32) (labL, laba, labb float64) {
 	x, y, z := rgbToCIEXYZ(r, g, b)
 	labL, laba, labb = cieXYZToLabD65(x, y, z)
 	return

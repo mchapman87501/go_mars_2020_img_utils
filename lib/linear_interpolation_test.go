@@ -6,9 +6,11 @@ import (
 )
 
 func BisectLeftTC(interp *Float64Interpolator, x float64, wantXPrev, wantXNext float64, t *testing.T) {
-	gotXPrev, gotXNext := interp.bisectLeft(x)
-	if (gotXPrev != wantXPrev) || (gotXNext != wantXNext) {
-		t.Errorf("Failed BisectLeft.  Given %v, wanted (%v, %v), got (%v, %v)", x, wantXPrev, wantXNext, gotXPrev, gotXNext)
+	gotXPrev, gotXNext := interp.bisectLeft(toFixed(x))
+	fixedPrev := toFixed(wantXPrev)
+	fixedNext := toFixed(wantXNext)
+	if (gotXPrev != fixedPrev) || (gotXNext != fixedNext) {
+		t.Errorf("Failed BisectLeft.  Given %v, wanted (%v, %v), got (%v, %v)", x, fixedPrev, fixedNext, gotXPrev, gotXNext)
 	}
 
 }

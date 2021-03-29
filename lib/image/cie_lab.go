@@ -4,7 +4,7 @@ import (
 	"image"
 	"image/color"
 
-	mars_lib_color "com.dmoonc/mchapman87501/mars_2020_img_utils/lib/image/color"
+	lib_color "com.dmoonc/mchapman87501/mars_2020_img_utils/lib/image/color"
 )
 
 type CIELab struct {
@@ -14,7 +14,7 @@ type CIELab struct {
 	Rect   image.Rectangle
 }
 
-func (p *CIELab) ColorModel() color.Model { return mars_lib_color.CIELabModel }
+func (p *CIELab) ColorModel() color.Model { return lib_color.CIELabModel }
 
 func (p *CIELab) Bounds() image.Rectangle { return p.Rect }
 
@@ -22,16 +22,16 @@ func (p *CIELab) At(x, y int) color.Color {
 	return p.CIELabAt(x, y)
 }
 
-func (p *CIELab) CIELabAt(x, y int) mars_lib_color.CIELab {
+func (p *CIELab) CIELabAt(x, y int) lib_color.CIELab {
 	if !(image.Point{x, y}.In(p.Rect)) {
-		return mars_lib_color.CIELab{
+		return lib_color.CIELab{
 			L: 0,
 			A: 0,
 			B: 0,
 		}
 	}
 	i := p.PixOffset(x, y)
-	result := mars_lib_color.CIELab{L: p.Pix[i], A: p.Pix[i+1], B: p.Pix[i+2]}
+	result := lib_color.CIELab{L: p.Pix[i], A: p.Pix[i+1], B: p.Pix[i+2]}
 	return result
 }
 
@@ -43,7 +43,7 @@ func (p *CIELab) Set(x, y int, c color.Color) {
 	if !(image.Point{x, y}.In(p.Rect)) {
 		return
 	}
-	c1 := mars_lib_color.CIELabModel.Convert(c).(mars_lib_color.CIELab)
+	c1 := lib_color.CIELabModel.Convert(c).(lib_color.CIELab)
 
 	i := p.PixOffset(x, y)
 	s := p.Pix[i : i+3 : i+3]
@@ -52,7 +52,7 @@ func (p *CIELab) Set(x, y int, c color.Color) {
 	s[2] = c1.B
 }
 
-func (p *CIELab) SetCIELab(x, y int, c mars_lib_color.CIELab) {
+func (p *CIELab) SetCIELab(x, y int, c lib_color.CIELab) {
 	if !(image.Point{x, y}.In(p.Rect)) {
 		return
 	}
@@ -81,11 +81,6 @@ func (p *CIELab) Opaque() bool {
 	return true
 }
 
-// Renormalize the Value channel to ensure all V values lie in 0.0 ... 1.0
-func (p *CIELab) Renormalize() {
-	// TBD
-}
-
 func NewCIELab(r image.Rectangle) *CIELab {
 	area := r.Dx() * r.Dy()
 	channels := 3 // L, a, b
@@ -100,9 +95,15 @@ func CIELabFromImage(src image.Image) *CIELab {
 	rect := src.Bounds()
 	result := NewCIELab(rect)
 
+	offset := 0
 	for y := rect.Min.Y; y < rect.Max.Y; y++ {
 		for x := rect.Min.X; x < rect.Max.X; x++ {
-			result.Set(x, y, src.At(x, y))
+			r, g, b, _ := src.At(x, y).RGBA()
+			labL, laba, labb := lib_color.RGBToCIELab(r, g, b)
+			result.Pix[offset] = labL
+			result.Pix[offset+1] = laba
+			result.Pix[offset+2] = labb
+			offset += 3
 		}
 	}
 	return result
