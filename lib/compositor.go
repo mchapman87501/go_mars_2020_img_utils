@@ -5,8 +5,8 @@ import (
 	"image/draw"
 	"math"
 
-	lib_image "com.dmoonc/mchapman87501/mars_2020_img_utils/lib/image"
-	lib_color "com.dmoonc/mchapman87501/mars_2020_img_utils/lib/image/color"
+	lib_image "dmoonc.com/mchapman87501/mars_2020_img_utils/lib/image"
+	lib_color "dmoonc.com/mchapman87501/mars_2020_img_utils/lib/image/color"
 )
 
 // Compositor builds a composite image from constituent tile

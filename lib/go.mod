@@ -1,4 +1,4 @@
-module com.dmoonc/mchapman87501/mars_2020_img_utils/lib
+module dmoonc.com/mchapman87501/mars_2020_img_utils/lib
 
 go 1.16
 

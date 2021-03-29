@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"com.dmoonc/mchapman87501/mars_2020_img_utils/lib"
+	"dmoonc.com/mchapman87501/mars_2020_img_utils/lib"
 )
 
 const outDir = "stereo_images/"
@@ -99,7 +99,7 @@ ORDER BY ext_sclk, cam_instrument`
 
 func savePNG(image image.Image, filename string) {
 	if err := lib.SavePNG(image, filename); err != nil {
-		fmt.Println("Error saving %v: %v\n", filename, err)
+		fmt.Printf("Error saving %v: %v\n", filename, err)
 	}
 }
 

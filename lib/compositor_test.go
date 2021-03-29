@@ -7,7 +7,7 @@ import (
 	"image/draw"
 	"testing"
 
-	hsv_image "com.dmoonc/mchapman87501/mars_2020_img_utils/lib/image"
+	hsv_image "dmoonc.com/mchapman87501/mars_2020_img_utils/lib/image"
 )
 
 func makeTile(row int, col int, width int, height int) draw.Image {

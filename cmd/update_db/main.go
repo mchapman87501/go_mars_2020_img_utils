@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"com.dmoonc/mchapman87501/mars_2020_img_utils/lib"
+	"dmoonc.com/mchapman87501/mars_2020_img_utils/lib"
 )
 
 func main() {
