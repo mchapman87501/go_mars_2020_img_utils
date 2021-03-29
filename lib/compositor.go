@@ -174,6 +174,10 @@ func (s *scaler) isIdentity() bool {
 	return (dMin <= 1.0e-6) && (math.Abs(s.Scale-1.0) <= 1.0e-6)
 }
 
+// Compress dynamic range as needed, to fit sRGB gamut.
+// NOTE that this naive implementation is sensitive to outliers.
+// Probably better to use a method, for L channel at least,
+// that ensures some fraction f of pixels are unclipped.
 func compressAsNeeded(imageRange LabBounds, image *lib_image.CIELab) {
 	// {'labL': [0.0, 99.99998453333127], 'laba': [-86.1829494051608, 98.23532017664644], 'labb': [-107.86546414496824, 94.47731817969378]}
 	minRGB := lib_color.CIELab{L: 0.0, A: -86.0, B: -107.0}

@@ -169,16 +169,21 @@ func main() {
 	}
 	for i, pair := range findStereoPairs(imageDB) {
 		fmt.Println("L:", pair.Left, "R:", pair.Right)
-		image, err := makeImage(imageDB, pair)
-		if err != nil {
-			fmt.Println("Error creating stereo pair:", err)
-		} else {
-			name := fmt.Sprintf("stereo_%04d_%v", i, strings.Replace(pair.Left, "L", "", 1))
-			pngName := outDir + name + ".png"
-			jsonName := outDir + name + ".json"
+		name := fmt.Sprintf("stereo_%04d_%v", i, strings.Replace(pair.Left, "L", "", 1))
+		pngName := outDir + name + ".png"
+		jsonName := outDir + name + ".json"
 
-			savePNG(image, pngName)
-			saveMetadata(pair, jsonName)
+		if !lib.FileExists(pngName) {
+			image, err := makeImage(imageDB, pair)
+			if err != nil {
+				fmt.Println("Error creating stereo pair:", err)
+			} else {
+
+				savePNG(image, pngName)
+				saveMetadata(pair, jsonName)
+			}
+		} else {
+			fmt.Println("Already done:", pngName)
 		}
 	}
 }
