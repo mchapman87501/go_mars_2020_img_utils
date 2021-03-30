@@ -108,13 +108,6 @@ func getDynamicRange(image *lib_image.CIELab) LabBounds {
 		for x := image.Bounds().Min.X; x < image.Bounds().Max.X; x++ {
 			pix := image.CIELabAt(x, y)
 
-			if pix.L > max.L {
-				max.L = pix.L
-			}
-			if pix.L < min.L {
-				min.L = pix.L
-			}
-
 			if pix.A > max.A {
 				max.A = pix.A
 			}
@@ -131,6 +124,11 @@ func getDynamicRange(image *lib_image.CIELab) LabBounds {
 		}
 	}
 
+	// Special case for Lab L:  Adjust exposure so that some large fraction
+	// of pixels are within gamut.
+	exposure := NewImageExposure(image)
+	min.L = exposure.cdf(0.0)
+	max.L = exposure.cdf(0.95)
 	return LabBounds{Min: min, Max: max}
 }
 
