@@ -9,7 +9,7 @@ import (
 	"sort"
 	"testing"
 
-	lib_image "dmoonc.com/mchapman87501/mars_2020_img_utils/lib/image"
+	lib_image "github.com/mchapman87501/go_mars_2020_img_utils/lib/image"
 )
 
 const troublesomeTilesOutDir = "test_data/out/compositor_test/"

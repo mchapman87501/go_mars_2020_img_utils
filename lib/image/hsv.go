@@ -4,7 +4,7 @@ import (
 	"image"
 	"image/color"
 
-	lib_color "dmoonc.com/mchapman87501/mars_2020_img_utils/lib/image/color"
+	lib_color "github.com/mchapman87501/go_mars_2020_img_utils/lib/image/color"
 )
 
 type HSV struct {

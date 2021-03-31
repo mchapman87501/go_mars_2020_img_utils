@@ -3,7 +3,7 @@ package lib
 import (
 	"image"
 
-	lib_image "dmoonc.com/mchapman87501/mars_2020_img_utils/lib/image"
+	lib_image "github.com/mchapman87501/go_mars_2020_img_utils/lib/image"
 )
 
 // I *think* this is a more traditional exposure matcher than that of
