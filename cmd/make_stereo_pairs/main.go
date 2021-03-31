@@ -71,6 +71,7 @@ ORDER BY ext_sclk, cam_instrument`
 
 	rows, err := imageDB.DB.Query(query)
 	if err == nil {
+		defer rows.Close()
 		prevID := ""
 		prevInstrument := ""
 		prevSclk := -1.0
