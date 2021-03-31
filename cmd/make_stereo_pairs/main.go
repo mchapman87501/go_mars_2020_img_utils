@@ -8,7 +8,9 @@ import (
 	"log"
 	"math"
 	"os"
+	"runtime"
 	"strings"
+	"sync"
 
 	"dmoonc.com/mchapman87501/mars_2020_img_utils/lib"
 )
@@ -42,7 +44,8 @@ func idsMatch(imageID1, imageID2 string) bool {
 }
 
 func splitLRSuffix(s string) (prefix, suffix string) {
-	suffixes := []string{"_LEFT", "_RIGHT"}
+	// Front hazcams use, e.g., "LEFT_A"
+	suffixes := []string{"_LEFT", "_RIGHT", "LEFT_A", "RIGHT_A"}
 
 	for _, suffix := range suffixes {
 		if strings.HasSuffix(s, suffix) {
@@ -157,33 +160,74 @@ func makeImage(imageDB lib.ImageDB, sp StereoPair) (image.Image, error) {
 
 	leftRect := image.Rect(0, 0, leftBounds.Dx(), leftBounds.Dy())
 	draw.Src.Draw(result, leftRect, leftImage, leftBounds.Min)
-	rightRect := image.Rect(leftBounds.Dx()+1, 0, leftBounds.Dx()+1+rightBounds.Dx(), rightBounds.Dy())
+	rightRect := image.Rect(leftBounds.Dx(), 0, leftBounds.Dx()+rightBounds.Dx(), rightBounds.Dy())
 	draw.Src.Draw(result, rightRect, rightReExposed, rightBounds.Min)
+
+	// TODO adjust dynamic range.
 	return result, nil
+}
+
+type Job struct {
+	Index int
+	Pair  StereoPair
+}
+
+func processJobs(
+	workerID int, jobs chan Job, imageDB lib.ImageDB,
+	wg *sync.WaitGroup,
+) {
+	for {
+		job, ok := <-jobs
+		if !ok {
+			wg.Done()
+			return
+		}
+
+		i := job.Index
+		pair := job.Pair
+		name := fmt.Sprintf(
+			"stereo_%04d_%v", i, strings.Replace(pair.Left, "L", "", 1))
+		pngName := outDir + name + ".png"
+		jsonName := outDir + name + ".json"
+
+		if !lib.FileExists(pngName) {
+			fmt.Println("L:", pair.Left, "R:", pair.Right)
+			image, err := makeImage(imageDB, pair)
+			if err != nil {
+				fmt.Println("Error creating stereo pair:", err)
+			} else {
+				savePNG(image, pngName)
+				saveMetadata(pair, jsonName)
+			}
+		}
+	}
+}
+
+func processConcurrently(imageDB lib.ImageDB) {
+	concurrency := runtime.NumCPU()
+
+	wg := sync.WaitGroup{}
+	wg.Add(concurrency)
+	jobs := make(chan Job, concurrency)
+	for i := 0; i < concurrency; i++ {
+		go func(workerID int) {
+			processJobs(workerID, jobs, imageDB, &wg)
+		}(i)
+	}
+
+	for i, pair := range findStereoPairs(imageDB) {
+		jobs <- Job{i, pair}
+	}
+
+	close(jobs)
+	wg.Wait()
 }
 
 func main() {
 	imageDB, err := lib.NewImageDB()
 	if err != nil {
-		log.Fatalf("Can't create database.")
+		log.Fatal("Could not instantiate image DB:", err)
 	}
-	for i, pair := range findStereoPairs(imageDB) {
-		fmt.Println("L:", pair.Left, "R:", pair.Right)
-		name := fmt.Sprintf("stereo_%04d_%v", i, strings.Replace(pair.Left, "L", "", 1))
-		pngName := outDir + name + ".png"
-		jsonName := outDir + name + ".json"
 
-		if !lib.FileExists(pngName) {
-			image, err := makeImage(imageDB, pair)
-			if err != nil {
-				fmt.Println("Error creating stereo pair:", err)
-			} else {
-
-				savePNG(image, pngName)
-				saveMetadata(pair, jsonName)
-			}
-		} else {
-			fmt.Println("Already done:", pngName)
-		}
-	}
+	processConcurrently(imageDB)
 }
